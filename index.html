@@ -1231,7 +1231,7 @@ select{-webkit-appearance:none;appearance:none;}
         if(auth) auth.style.display = 'flex';
         var msg = document.createElement('div');
         msg.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #ff3838;color:#ff3838;padding:10px 20px;border-radius:8px;font-family:sans-serif;font-size:13px;z-index:9999;text-align:center;max-width:320px;';
-        msg.innerHTML = '⚠️ Could not connect to server.<br>Please wait or try reloading the page';
+        msg.innerHTML = '⚠️ Could not connect to server.<br>Open via Netlify, not by double-clicking the file.';
         document.body.appendChild(msg);
         setTimeout(function(){ msg.remove(); }, 6000);
       }
@@ -2531,21 +2531,23 @@ function renderShop(){
   const eb=getEquippedBadge();
   const ebEl=document.getElementById('equipped-badge-disp');if(ebEl)ebEl.textContent=eb?`Equipped: ${eb.emoji} ${eb.name}`:'No badge equipped';
   const grid=document.getElementById('badge-grid');grid.innerHTML='';
+  const pawnedBadgeIds=new Set((_getPawnData()||[]).filter(p=>p.type==='badge').map(p=>p.itemId));
   BADGES.forEach((b,i)=>{
-    const owned=badge_data.owned.includes(b.id);
-    const equipped=badge_data.equipped===b.id;
-    const prevOwned=i===0||badge_data.owned.includes(BADGES[i-1].id);
+    const isPawned=pawnedBadgeIds.has(b.id);
+    const owned=badge_data.owned.includes(b.id)||isPawned;
+    const equipped=badge_data.equipped===b.id&&!isPawned;
+    const prevOwned=i===0||badge_data.owned.includes(BADGES[i-1].id)||pawnedBadgeIds.has(BADGES[i-1]?.id);
     const card=document.createElement('div');
     card.className='badge-card'+(equipped?' equipped':owned?' owned':'');
-    card.style.cssText=`border-color:${equipped?b.color:owned?'var(--cyan)':'var(--border)'};box-shadow:${equipped?`0 0 14px ${b.color}66`:''};opacity:${prevOwned?'1':'0.4'};cursor:pointer;`;
-    const label=equipped?'EQUIPPED':owned?'OWNED':`💰 ${b.cost.toLocaleString()}`;
-    const labelColor=equipped?b.color:owned?'var(--cyan)':'var(--yellow)';
+    card.style.cssText=`border-color:${isPawned?'var(--orange)':equipped?b.color:owned?'var(--cyan)':'var(--border)'};box-shadow:${equipped?`0 0 14px ${b.color}66`:''};opacity:${prevOwned?'1':'0.4'};cursor:pointer;`;
+    const label=isPawned?'🔒 PAWNED':equipped?'EQUIPPED':owned?'OWNED':`💰 ${b.cost.toLocaleString()}`;
+    const labelColor=isPawned?'var(--orange)':equipped?b.color:owned?'var(--cyan)':'var(--yellow)';
     card.innerHTML=`
       <div style="font-size:42px;margin-bottom:5px">${b.emoji}</div>
       <div style="font-size:15px;font-weight:700;color:${b.color};margin-bottom:3px">${b.name}</div>
       <div style="font-size:12px;font-weight:700;color:${b.color};background:${b.color}22;border-radius:4px;padding:2px 6px;display:inline-block;margin-bottom:6px">+${Math.round(b.bonus*100)}% Cash</div>
       <div style="font-size:13px;font-weight:700;color:${labelColor}">${label}</div>`;
-    card.onclick=()=>badgeAction(b.id);
+    card.onclick=()=>isPawned?toast('🔒 Badge is pawned! Redeem it from the Pawn Shop first.'):badgeAction(b.id);
     grid.appendChild(card);
   });
 }
@@ -3284,10 +3286,15 @@ function confirmPawn(){
   if(_pawnType==='card'){
     const inv=S.get('card_inv',{});
     const level=inv[itemId]||0;
-    pawn.cardLevel=level; // store for restore
+    // Set cardLevel on the pawn object before pushing (captured via _savedCardLevel)
     inv[itemId]=0;
     S.set('card_inv',inv);
     window._PAWN_CARD_INV=inv;
+    // Also zero in the live cardInv inside car module
+    if(window._liveCardInv)window._liveCardInv[itemId]=0;
+    // Track pawned cards so chest rolls skip them
+    if(!window._pawnedCardIds)window._pawnedCardIds=new Set();
+    window._pawnedCardIds.add(itemId);
   } else if(_pawnType==='badge'){
     badge_data.owned=badge_data.owned.filter(id=>id!==itemId);
     if(badge_data.equipped===itemId)badge_data.equipped=null;
@@ -3317,6 +3324,7 @@ function confirmPawn(){
   _setPawnData(pawns);
 
   updateUI();renderBank();
+  setTimeout(_renderPawnShop,100);
   toast(`🤝 Pawned "${itemName}" for ${pawnedValue} 💰!`);
 }
 
@@ -3338,11 +3346,12 @@ function redeemPawn(pawnId){
 
   // Restore item
   if(pawn.type==='card'){
-    const inv=window._PAWN_CARD_INV||{};
-    // Restore to original level — stored in pawn record
+    const inv=S.get('card_inv',{});
     inv[pawn.itemId]=pawn.cardLevel||1;
     S.set('card_inv',inv);
-    if(window._pawnRestoreCardLevel)window._pawnRestoreCardLevel(pawn.itemId,pawn.cardLevel||1);
+    window._PAWN_CARD_INV=inv;
+    if(window._liveCardInv)window._liveCardInv[pawn.itemId]=pawn.cardLevel||1;
+    if(window._pawnedCardIds)window._pawnedCardIds.delete(pawn.itemId);
   } else if(pawn.type==='badge'){
     if(!badge_data.owned.includes(pawn.itemId))badge_data.owned.push(pawn.itemId);
     S.set('badges',badge_data);
@@ -4044,6 +4053,7 @@ updateUI();
   // ── Storage: card inventory lives in Supabase S just like other data
   function _saveCardInv(){S.set('card_inv',cardInv);}
   let cardInv=S.get('card_inv',{});
+  window._liveCardInv=cardInv; // exposed for pawn system
 
   // ── Chest unlock tracking (cards opened per chest type)
   let chestUnlockData=S.get('chest_unlock',{standard_cards:0,premium_cards:0});
@@ -4113,18 +4123,27 @@ updateUI();
     });
     const ic=document.getElementById('inv-cash');if(ic)ic.textContent=state.cash.toLocaleString();
     const grid=document.getElementById('inv-grid');grid.innerHTML='';
-    const owned=COLLECTION_CARS.filter(c=>(cardInv[c.id]||0)>0);
+    const pawnedIds=window._pawnedCardIds||new Set();
+    const owned=COLLECTION_CARS.filter(c=>(cardInv[c.id]||0)>0||pawnedIds.has(c.id));
     const filtered=filter==='all'?owned:owned.filter(c=>c.tier===filter);
     if(!filtered.length){grid.innerHTML=`<div style="color:var(--gray);font-size:14px;padding:16px 0;">No cards${filter!=='all'?' in this tier':' yet — open some packs!'}.</div>`;return;}
     [...filtered].sort((a,b)=>['S','A','B','C','D'].indexOf(a.tier)-['S','A','B','C','D'].indexOf(b.tier))
     .forEach(car=>{
-      const lv=cardInv[car.id];
-      const wrap=document.createElement('div');wrap.className='inv-wrap';
+      const isPawned=pawnedIds.has(car.id);
+      const lv=isPawned?(S.get('pawn_data',[]).find(p=>p.itemId===car.id&&p.type==='card')?.cardLevel||1):cardInv[car.id];
+      const wrap=document.createElement('div');wrap.className='inv-wrap';wrap.style.position='relative';
       wrap.appendChild(buildCard(car,lv,150));
-      const sb=document.createElement('button');sb.className='inv-sell-btn';
-      sb.textContent='SELL '+colSellPrice(car,lv)+' 💰';
-      sb.onclick=e=>{e.stopPropagation();colSellCard(car.id);};
-      wrap.appendChild(sb);
+      if(isPawned){
+        const badge=document.createElement('div');
+        badge.style.cssText='position:absolute;top:6px;left:6px;background:rgba(255,166,0,.9);color:#000;font-family:\'Bebas Neue\',cursive;font-size:13px;letter-spacing:1px;padding:2px 8px;border-radius:4px;pointer-events:none;z-index:5;';
+        badge.textContent='PAWNED';
+        wrap.appendChild(badge);
+      } else {
+        const sb=document.createElement('button');sb.className='inv-sell-btn';
+        sb.textContent='SELL '+colSellPrice(car,lv)+' 💰';
+        sb.onclick=e=>{e.stopPropagation();colSellCard(car.id);};
+        wrap.appendChild(sb);
+      }
       grid.appendChild(wrap);
     });
   }
@@ -4137,6 +4156,7 @@ updateUI();
   function colSellPrice(car,lv){return Math.floor(lv*COL_CHESTS[0].basePrice*0.80);}
   function colSellCard(id){
     const lv=cardInv[id]||0;if(!lv)return;
+    if(window._pawnedCardIds&&window._pawnedCardIds.has(id)){toast('🔒 Card is pawned! Redeem it from the Pawn Shop first.');return;}
     const car=COLLECTION_CARS.find(c=>c.id===id);
     const sp=colSellPrice(car,lv);
     cardInv[id]=0;state.cash+=sp;
@@ -4236,7 +4256,7 @@ updateUI();
     if(state.cash<cost){toast('Not enough cash! Need '+cost+' 💰');return;}
     state.cash-=cost;S.set('state',state);updateUI();
     colPackQ=[];let attempts=0;
-    while(colPackQ.length<qty&&attempts<1000){attempts++;const rolled=colRollCard(chest.odds);if((cardInv[rolled.id]||0)>=COL_MAX_LV[rolled.tier])continue;colPackQ.push(rolled);}
+    while(colPackQ.length<qty&&attempts<1000){attempts++;const rolled=colRollCard(chest.odds);if((cardInv[rolled.id]||0)>=COL_MAX_LV[rolled.tier])continue;if(window._pawnedCardIds&&window._pawnedCardIds.has(rolled.id))continue;colPackQ.push(rolled);}
     while(colPackQ.length<qty)colPackQ.push(colRollCard(chest.odds));
     colPackIdx=0;colRevCards=[];colOpenLocked=false;
     const ov=document.getElementById('col-open-overlay');ov.classList.add('show');
