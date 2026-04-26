@@ -829,15 +829,16 @@ select{-webkit-appearance:none;appearance:none;}
           <div class="stat-lbl">Total</div>
         </div>
       </div>
-      <!-- Interest collect banner -->
-      <div id="bank-interest-banner" style="display:none;background:rgba(0,210,160,.1);border:1px solid var(--cyan);border-radius:8px;padding:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <div>
-          <div style="font-family:'Bebas Neue',cursive;font-size:18px;color:var(--cyan);letter-spacing:2px;">💰 INTEREST READY</div>
-          <div id="bank-interest-amount" style="font-size:14px;color:var(--gray);"></div>
+      <!-- Interest info -->
+      <div id="bank-interest-info" style="font-size:14px;color:var(--gray);margin-bottom:10px;"></div>
+      <!-- Interest log -->
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-family:'Bebas Neue',cursive;font-size:16px;letter-spacing:1.5px;color:var(--cyan);">📋 INTEREST LOG</div>
+          <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray);font-size:12px;" onclick="clearInterestLog()">CLEAR</button>
         </div>
-        <button class="btn btn-cyan" onclick="collectInterest()">COLLECT</button>
+        <div id="bank-interest-log"></div>
       </div>
-      <div id="bank-interest-info" style="font-size:13px;color:var(--gray);margin-bottom:14px;"></div>
       <!-- Deposit -->
       <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;">
         <div style="font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:2px;color:var(--yellow);margin-bottom:10px;">DEPOSIT TO BANK</div>
@@ -1231,7 +1232,7 @@ select{-webkit-appearance:none;appearance:none;}
         if(auth) auth.style.display = 'flex';
         var msg = document.createElement('div');
         msg.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #ff3838;color:#ff3838;padding:10px 20px;border-radius:8px;font-family:sans-serif;font-size:13px;z-index:9999;text-align:center;max-width:320px;';
-        msg.innerHTML = '⚠️ Could not connect to server.<br>Please wait or try reloading the page.';
+        msg.innerHTML = '⚠️ Could not connect to server.<br>Please wait or try reloading';
         document.body.appendChild(msg);
         setTimeout(function(){ msg.remove(); }, 6000);
       }
@@ -1412,8 +1413,9 @@ let pass_data=S.get('pass_data',{passes:[],inventory:{},claimedDates:{}});
     state.daily_xp=0;
     state.last_reset=today;
     state._lastRawScore=null; // clear stale audit score
-    // Bank daily snapshot for interest calculation
-    setTimeout(_bankDailySnapshot,600);
+    // Bank interest: process any due weekly interest + check threshold
+    _processInterest();
+    _checkInterestThreshold();
     // Reset all missions (fresh day)
     const tickedYesterday=Object.keys(missions_status).filter(k=>missions_status[k]==='done');
     const _resetStreaks=()=>{if(typeof STREAK_MISSIONS!=='undefined'){STREAK_MISSIONS.forEach(m=>{if(!tickedYesterday.includes(m)){if(streaks[m])streaks[m].count=0;}});S.set('streaks',streaks);}};
@@ -1464,6 +1466,9 @@ let pass_data=S.get('pass_data',{passes:[],inventory:{},claimedDates:{}});
       });
       _savePassData&&_savePassData();
     }
+
+    // ── PAWN EXPIRY CHECK: also run on daily reset (not just on load) ──
+    _checkExpiredPawns&&_checkExpiredPawns();
   }
 
   // ── WEEKLY RESET ─────────────────────────
@@ -2045,6 +2050,7 @@ function challengeBoss(bid){
 }
 function tickBossMission(bid){
   const boss=BOSSES.find(b=>b.id===bid),bd=boss_data[bid];
+  if(!bd||!bd.active){toast('No active boss fight!');return;}
   const remaining=boss.missions.filter(m=>!bd.missions_done.includes(m));
   if(!remaining.length){winBoss(bid);return;}
   const items=remaining.map(m=>`<button class="btn btn-purple btn-full" style="margin-bottom:6px;text-align:left" data-bid="${bid}" data-m="${m.replace(/"/g,'&quot;')}" onclick="confirmBossMission(this.dataset.bid,this.dataset.m)">${m}</button>`).join('');
@@ -2554,8 +2560,11 @@ function renderShop(){
 function badgeAction(bid){
   const b=BADGES.find(x=>x.id===bid);
   const i=BADGES.indexOf(b);
+  const pawnedIds=new Set((_getPawnData()||[]).filter(p=>p.type==='badge').map(p=>p.itemId));
+  const isPawned=pawnedIds.has(bid);
+  if(isPawned){toast('🔒 This badge is pawned! Redeem it from the Pawn Shop first.');return;}
   const owned=badge_data.owned.includes(bid),equipped=badge_data.equipped===bid;
-  const prevOwned=i===0||badge_data.owned.includes(BADGES[i-1].id);
+  const prevOwned=i===0||badge_data.owned.includes(BADGES[i-1].id)||pawnedIds.has(BADGES[i-1]?.id);
   if(equipped){badge_data.equipped=null;S.set('badges',badge_data);updateUI();renderShop();toast(`${b.emoji} ${b.name} unequipped`);return;}
   if(owned){badge_data.equipped=bid;S.set('badges',badge_data);updateUI();renderShop();toast(`${b.emoji} ${b.name} equipped!`);return;}
   if(!prevOwned){toast(`Buy ${BADGES[i-1].emoji} ${BADGES[i-1].name} first!`);return;}
@@ -2962,53 +2971,55 @@ window.usePass=usePass;
 function getBankBalance(){return S.get('bank_balance',0);}
 function _setBankBalance(v){S.set('bank_balance',Math.max(0,Math.round(v)));}
 
-// ── Savings Interest helpers ──
-// Stores: {snapshots:[{date,balance},...], pendingInterest:0, weekStart:date}
-function _getBankMeta(){return S.get('bank_meta',{snapshots:[],pendingInterest:0,weekStart:todayStr()});}
-function _setBankMeta(m){S.set('bank_meta',m);}
+// ── Savings Interest — simple weekly compounding ──
+function _getInterestMeta(){return S.get('interest_meta',{lastProcessedWeek:'',belowThreshold:false,log:[]});}
+function _setInterestMeta(m){S.set('interest_meta',m);}
 
-function _bankDailySnapshot(){
-  // Called once per day (checked via last_snapshot_date stored in meta)
-  const meta=_getBankMeta();
+function _checkInterestThreshold(){
+  if(getBankBalance()<100){const meta=_getInterestMeta();if(!meta.belowThreshold){meta.belowThreshold=true;_setInterestMeta(meta);}}
+}
+
+function _processInterest(){
+  const meta=_getInterestMeta();
+  const currentWk=weekKey();
+  if(meta.lastProcessedWeek===currentWk)return;
+  let wkDate=meta.lastProcessedWeek?new Date(meta.lastProcessedWeek.replace('week_','')):null;
+  const currentWkDate=new Date(currentWk.replace('week_',''));
+  if(!wkDate){meta.lastProcessedWeek=currentWk;meta.belowThreshold=false;_setInterestMeta(meta);return;}
   const today=todayStr();
-  // Avoid double-snapping same day
-  if(meta.lastSnapDate===today)return;
-  meta.lastSnapDate=today;
-  if(!meta.weekStart)meta.weekStart=today;
-  if(!meta.snapshots)meta.snapshots=[];
-  if(!meta.pendingInterest)meta.pendingInterest=0;
-
-  const balance=getBankBalance();
-  meta.snapshots.push({date:today,balance});
-
-  // Check if 7 snapshots collected → compute weekly interest
-  if(meta.snapshots.length>=7){
-    const avg=Math.round(meta.snapshots.reduce((s,x)=>s+x.balance,0)/meta.snapshots.length);
-    if(avg>=100){
-      // 10% interest on average balance
-      const interest=Math.round(avg*0.10);
-      meta.pendingInterest=(meta.pendingInterest||0)+interest;
+  let credited=0;
+  while(wkDate<currentWkDate){
+    wkDate.setDate(wkDate.getDate()+7);
+    const wkStr='week_'+wkDate.toISOString().slice(0,10);
+    if(wkStr>currentWk)break;
+    const balance=getBankBalance()+credited;
+    if(!meta.belowThreshold&&balance>=100){
+      const interest=Math.round(balance*0.02);
+      if(interest>0){credited+=interest;if(!meta.log)meta.log=[];meta.log.unshift({week:wkStr,amount:interest,balance,date:today});if(meta.log.length>20)meta.log=meta.log.slice(0,20);}
+    } else {
+      if(!meta.log)meta.log=[];meta.log.unshift({week:wkStr,amount:0,balance,date:today,skipped:true});if(meta.log.length>20)meta.log=meta.log.slice(0,20);
     }
-    // Reset for next week
-    meta.snapshots=[];
-    meta.weekStart=today;
+    meta.belowThreshold=false;
+    meta.lastProcessedWeek=wkStr;
   }
-  _setBankMeta(meta);
+  _setInterestMeta(meta);
+  if(credited>0){_setBankBalance(getBankBalance()+credited);toast('🏦 +'+credited+' 💰 savings interest auto-credited!');}
 }
 
-function collectInterest(){
-  const meta=_getBankMeta();
-  const pending=meta.pendingInterest||0;
-  if(!pending){toast('No interest to collect yet!');return;}
-  state.cash+=pending;
-  meta.pendingInterest=0;
-  _setBankMeta(meta);
-  S.set('state',state);
-  updateUI();renderBank();
-  toast(`💰 Collected ${pending} coins interest!`);
+function renderInterestLog(){
+  const meta=_getInterestMeta();const log=meta.log||[];
+  const el=document.getElementById('bank-interest-log');if(!el)return;
+  if(!log.length){el.innerHTML='<div style="font-size:13px;color:var(--gray);">No interest history yet.</div>';return;}
+  el.innerHTML=log.map(e=>e.skipped
+    ?`<div style="font-size:13px;color:var(--red);padding:4px 0;border-bottom:1px solid var(--border);">❌ ${e.week.replace('week_','')} — skipped (balance dipped below 100)</div>`
+    :`<div style="font-size:13px;color:var(--cyan);padding:4px 0;border-bottom:1px solid var(--border);">✅ ${e.week.replace('week_','')} — +${e.amount} 💰 (2% of ${e.balance})</div>`
+  ).join('');
 }
+function clearInterestLog(){const meta=_getInterestMeta();meta.log=[];_setInterestMeta(meta);renderInterestLog();toast('Interest log cleared.');}
+
 
 function renderBank(){
+  _processInterest();
   const bank=getBankBalance();
   const wallet=state.cash;
   const bwv=document.getElementById('bank-wallet-val');if(bwv)bwv.textContent=wallet.toLocaleString();
@@ -3016,32 +3027,18 @@ function renderBank(){
   const btv=document.getElementById('bank-total-val');if(btv)btv.textContent=(wallet+bank).toLocaleString();
   const sbd=document.getElementById('shop-bank-disp');if(sbd)sbd.textContent=bank.toLocaleString();
 
-  // Interest banner
-  const meta=_getBankMeta();
-  const pending=meta.pendingInterest||0;
+  // Interest info
+  const iMeta=_getInterestMeta();
   const banner=document.getElementById('bank-interest-banner');
-  const amountEl=document.getElementById('bank-interest-amount');
   const infoEl=document.getElementById('bank-interest-info');
-  if(banner){
-    if(pending>0){
-      banner.style.display='flex';
-      if(amountEl)amountEl.textContent=`+${pending} coins earned from weekly average balance`;
-    } else {
-      banner.style.display='none';
-    }
-  }
+  if(banner)banner.style.display='none'; // no manual collect needed
   if(infoEl){
-    const snaps=meta.snapshots||[];
-    const daysLeft=7-snaps.length;
     const minOk=bank>=100;
-    if(pending>0){
-      infoEl.textContent='';
-    } else if(!minOk){
-      infoEl.textContent='⚠️ Balance below 100 — no interest this week if it stays low';
-    } else {
-      infoEl.textContent=`📅 ${snaps.length}/7 days tracked this week · ${daysLeft} day${daysLeft!==1?'s':''} until interest calculation`;
-    }
+    infoEl.innerHTML=minOk
+      ?`✅ Balance above 100 — 2% interest will auto-credit each weekly reset`
+      :`⚠️ Balance below 100 — <strong style="color:var(--red)">interest paused this week</strong>`;
   }
+  renderInterestLog();
 
   // Pawn shop
   _renderPawnShop();
@@ -3054,6 +3051,7 @@ function bankDeposit(){
   if(amt>state.cash){toast(`You only have ${state.cash} 💰 in your wallet!`);return;}
   state.cash-=amt;
   _setBankBalance(getBankBalance()+amt);
+  _checkInterestThreshold();
   S.set('state',state);updateUI();renderBank();inp.value='';
   toast(`⬆ ${amt} 💰 deposited to bank!`);
 }
@@ -3062,6 +3060,7 @@ function bankDepositAll(){
   if(!amt){toast('Wallet is empty!');return;}
   _setBankBalance(getBankBalance()+amt);
   state.cash=0;
+  _checkInterestThreshold();
   S.set('state',state);updateUI();renderBank();
   toast(`⬆ All ${amt} 💰 deposited!`);
 }
@@ -3072,6 +3071,7 @@ function bankWithdraw(){
   if(amt<=0){toast('Enter a valid amount!');return;}
   if(amt>bank){toast(`Bank only has ${bank} 💰!`);return;}
   _setBankBalance(bank-amt);
+  _checkInterestThreshold();
   state.cash+=amt;
   S.set('state',state);updateUI();renderBank();inp.value='';
   toast(`⬇ ${amt} 💰 withdrawn from bank!`);
@@ -3081,6 +3081,7 @@ function bankWithdrawAll(){
   if(!bank){toast('Bank is empty!');return;}
   state.cash+=bank;
   _setBankBalance(0);
+  _checkInterestThreshold();
   S.set('state',state);updateUI();renderBank();
   toast(`⬇ All ${bank} 💰 withdrawn!`);
 }
@@ -3088,10 +3089,11 @@ window.bankDeposit=bankDeposit;
 window.bankDepositAll=bankDepositAll;
 window.bankWithdraw=bankWithdraw;
 window.bankWithdrawAll=bankWithdrawAll;
-window.collectInterest=collectInterest;
+window.clearInterestLog=clearInterestLog;
+window.renderInterestLog=renderInterestLog;
 
-// ── Run daily snapshot on app load ──
-setTimeout(_bankDailySnapshot,500);
+// _bankDailySnapshot is called from within _bootApp daily reset block (after Supabase loads)
+// and also from renderBank on app open. Do NOT call it here via setTimeout.
 
 // ═══════════════════════════════════════════
 // PAWN SHOP
@@ -3336,10 +3338,11 @@ function redeemPawn(pawnId){
   const today=todayStr();
   const days=_daysSince(pawn.pawnDate,today);
   if(days>=8){toast('Too late! Item is gone forever.');pawns.splice(idx,1);_setPawnData(pawns);renderBank();return;}
-  const fee=Math.round(pawn.pawnedValue*0.03*days);
+  const billableDays=Math.max(1,days); // minimum 1 day fee even if redeemed same day
+  const fee=Math.round(pawn.pawnedValue*0.03*billableDays);
   const total=pawn.pawnedValue+fee;
   if(state.cash<total){toast(`Need ${total} 💰 to redeem (${pawn.pawnedValue} + ${fee} fee). You have ${state.cash}.`);return;}
-  if(!confirm(`Redeem "${pawn.itemName}"? Cost: ${total} 💰 (${pawn.pawnedValue} + ${fee} fee for ${days} day${days!==1?'s':''})`))return;
+  if(!confirm(`Redeem "${pawn.itemName}"? Cost: ${total} 💰 (${pawn.pawnedValue} + ${fee} fee for ${billableDays} day${billableDays!==1?'s':''})`))return;
 
   state.cash-=total;
   S.set('state',state);
@@ -3378,6 +3381,7 @@ function _renderPawnShop(){
   } else {
     activeList.innerHTML=alive.map(p=>{
       const days=_daysSince(p.pawnDate,today);
+      const displayDay=days+1;
       const daysLeft=7-days;
       const fee=Math.round(p.pawnedValue*0.03*days);
       const total=p.pawnedValue+fee;
@@ -3386,7 +3390,7 @@ function _renderPawnShop(){
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
           <div>
             <div style="font-family:'Bebas Neue',cursive;font-size:17px;color:var(--orange);">${p.itemName}</div>
-            <div style="font-size:13px;color:var(--gray);">Pawned for ${p.pawnedValue} 💰 · Day ${days}</div>
+            <div style="font-size:13px;color:var(--gray);">Pawned for ${p.pawnedValue} 💰 · Day ${displayDay}</div>
             <div style="font-size:13px;color:${urgency};font-weight:700;">${daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} left`:'⚠️ Last day!'} · Buyback: ${total} 💰</div>
           </div>
           <button class="btn btn-sm" style="background:var(--orange);color:#000;" onclick="redeemPawn('${p.id}')">REDEEM</button>
@@ -3404,17 +3408,12 @@ window.confirmPawn=confirmPawn;
 window.redeemPawn=redeemPawn;
 
 // ── Hook pawn shop into car collection module ──
-// We expose car inventory to pawn shop once the car module initializes
 setTimeout(()=>{
-  _checkExpiredPawns();
-  // Try to grab car collection refs
+  // Always set up car refs regardless of login state
   if(typeof COLLECTION_CARS!=='undefined'){
     window._PAWN_CARS=COLLECTION_CARS;
   }
-  // car_inventory key used by car collection module
-  const storedCarInv=S.get('card_inv',{});
   window._PAWN_CARD_INV=S.get('card_inv',{});
-  // Expose restore helper so redeem can write back
   window._pawnRestoreCardLevel=function(carId,level){
     const inv=S.get('card_inv',{});
     inv[carId]=level;
@@ -3422,6 +3421,12 @@ setTimeout(()=>{
     window._PAWN_CARD_INV=inv;
   };
   setPawnType('card');
+  // Expired pawn check — only safe after Supabase loaded
+  function _tryExpiredCheck(){
+    if(!window._supaUser){setTimeout(_tryExpiredCheck,800);return;}
+    _checkExpiredPawns();
+  }
+  _tryExpiredCheck();
 },800);
 
 // ═══════════════════════════════════════════
@@ -4238,11 +4243,36 @@ updateUI();
     });
   }
 
-  // ── Roll
-  function colRollCard(odds){
-    const tiers=['D','C','B','A','S'];let cum=0;const r=Math.random()*100;
-    for(const t of tiers){cum+=odds[t];if(r<cum){const pool=COLLECTION_CARS.filter(c=>c.tier===t);return pool[Math.floor(Math.random()*pool.length)];}}
-    const pool=COLLECTION_CARS.filter(c=>c.tier==='S');return pool[Math.floor(Math.random()*pool.length)];
+  // ── Roll — dynamic sample space (excludes maxed + pawned cards, renormalises odds)
+  function colRollCard(odds, excludeIds){
+    // Build available pool per tier, excluding maxed and pawned
+    const tiers=['D','C','B','A','S'];
+    const availByTier={};
+    tiers.forEach(t=>{
+      availByTier[t]=COLLECTION_CARS.filter(c=>
+        c.tier===t &&
+        !excludeIds.has(c.id) &&
+        (cardInv[c.id]||0)<COL_MAX_LV[t]
+      );
+    });
+    // Renormalise: only include tiers that still have available cards
+    const activeTiers=tiers.filter(t=>availByTier[t].length>0);
+    if(!activeTiers.length)return null; // all cards maxed/pawned
+    const totalWeight=activeTiers.reduce((s,t)=>s+odds[t],0);
+    if(!totalWeight)return null;
+    const r=Math.random()*totalWeight;
+    let cum=0;
+    for(const t of activeTiers){
+      cum+=odds[t];
+      if(r<cum){
+        const pool=availByTier[t];
+        return pool[Math.floor(Math.random()*pool.length)];
+      }
+    }
+    // fallback
+    const lastTier=activeTiers[activeTiers.length-1];
+    const pool=availByTier[lastTier];
+    return pool[Math.floor(Math.random()*pool.length)];
   }
 
   // ── Chest opening
@@ -4255,9 +4285,28 @@ updateUI();
     }
     if(state.cash<cost){toast('Not enough cash! Need '+cost+' 💰');return;}
     state.cash-=cost;S.set('state',state);updateUI();
-    colPackQ=[];let attempts=0;
-    while(colPackQ.length<qty&&attempts<1000){attempts++;const rolled=colRollCard(chest.odds);if((cardInv[rolled.id]||0)>=COL_MAX_LV[rolled.tier])continue;if(window._pawnedCardIds&&window._pawnedCardIds.has(rolled.id))continue;colPackQ.push(rolled);}
-    while(colPackQ.length<qty)colPackQ.push(colRollCard(chest.odds));
+
+    // Build excluded set: pawned cards
+    const _pawnedNow=new Set((_getPawnData()||[]).filter(p=>p.type==='card').map(p=>p.itemId));
+
+    // Roll the full pack upfront, updating a LIVE snapshot of cardInv as we go
+    // so each roll sees the latest state (cards maxed mid-pack are excluded from later rolls)
+    const liveInv={...cardInv}; // snapshot we mutate per draw
+    colPackQ=[];
+    for(let i=0;i<qty;i++){
+      // excludeIds = pawned + any card that would be maxed given liveInv
+      const excludeIds=new Set(_pawnedNow);
+      COLLECTION_CARS.forEach(c=>{if((liveInv[c.id]||0)>=COL_MAX_LV[c.tier])excludeIds.add(c.id);});
+      const rolled=colRollCard(chest.odds,excludeIds);
+      if(!rolled){
+        // Truly nothing available — stop early (can't give more cards)
+        toast(`Only ${i} card${i===1?'':'s'} available — not enough cards to fill the pack!`);
+        break;
+      }
+      colPackQ.push(rolled);
+      liveInv[rolled.id]=(liveInv[rolled.id]||0)+1; // mark as obtained in this pack
+    }
+
     colPackIdx=0;colRevCards=[];colOpenLocked=false;
     const ov=document.getElementById('col-open-overlay');ov.classList.add('show');
     document.getElementById('col-chest-phase').style.display='block';
@@ -4265,7 +4314,7 @@ updateUI();
     document.getElementById('open-chest-label').textContent=chest.name+' CHEST';
     document.getElementById('chest-svg-slot').innerHTML=colChestSVG(chest.id,chest.color);
     document.getElementById('chest-glow').style.setProperty('--glow-color',chest.glowColor);
-    document.getElementById('pack-info').textContent=qty>1?`Pack of ${qty} — click chest for each card`:'';
+    document.getElementById('pack-info').textContent=colPackQ.length>1?`Pack of ${colPackQ.length} — click chest for each card`:'';
     document.getElementById('next-btn').style.display='none';
     document.getElementById('done-btn').style.display='none';
   }
