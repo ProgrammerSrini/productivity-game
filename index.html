@@ -4701,7 +4701,14 @@ window.authSignup=async function(){
   if(existing){_authMsg('Username already taken! Choose a different one.','#ff3838');return;}
   _authMsg('Creating account…','#888aaa');
   const{data,error}=await supa.auth.signUp({email,password:pw,options:{data:{username:uname},emailRedirectTo:window.location.origin+window.location.pathname}});
-  if(error){_authMsg(error.message,'#ff3838');}
+  if(error){
+    const msg=error.message||'';
+    if(msg.toLowerCase().includes('already registered')||msg.toLowerCase().includes('already exists')||msg.toLowerCase().includes('email')){
+      _authMsg('❌ Email already registered! Try logging in instead.','#ff3838');
+    } else {
+      _authMsg(msg,'#ff3838');
+    }
+  }
   else if(data.user){
     // Save username->email mapping
     const{error:ue}=await supa.from('username_lookup').insert({username:uname.toLowerCase(),email:email});
