@@ -812,9 +812,9 @@ select{-webkit-appearance:none;appearance:none;}
 
   <!-- BANK TAB -->
   <div id="shopsub-bank" style="display:none;">
+    <!-- Balances -->
     <div class="card" style="border-color:rgba(116,185,255,0.4);">
       <div class="card-title" style="color:var(--blue);">🏦 BANK</div>
-      <div style="font-size:15px;color:var(--gray);margin-bottom:16px;">Save your cash here. Withdraw anytime. Simple.</div>
       <div class="stat-row" style="margin-bottom:18px;">
         <div class="stat-box" style="border-color:rgba(255,217,61,.3);">
           <div class="stat-val" id="bank-wallet-val" style="color:var(--yellow);">0</div>
@@ -829,6 +829,15 @@ select{-webkit-appearance:none;appearance:none;}
           <div class="stat-lbl">Total</div>
         </div>
       </div>
+      <!-- Interest collect banner -->
+      <div id="bank-interest-banner" style="display:none;background:rgba(0,210,160,.1);border:1px solid var(--cyan);border-radius:8px;padding:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-family:'Bebas Neue',cursive;font-size:18px;color:var(--cyan);letter-spacing:2px;">💰 INTEREST READY</div>
+          <div id="bank-interest-amount" style="font-size:14px;color:var(--gray);"></div>
+        </div>
+        <button class="btn btn-cyan" onclick="collectInterest()">COLLECT</button>
+      </div>
+      <div id="bank-interest-info" style="font-size:13px;color:var(--gray);margin-bottom:14px;"></div>
       <!-- Deposit -->
       <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;">
         <div style="font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:2px;color:var(--yellow);margin-bottom:10px;">DEPOSIT TO BANK</div>
@@ -846,6 +855,26 @@ select{-webkit-appearance:none;appearance:none;}
           <button class="btn" style="background:var(--blue);color:#000;" onclick="bankWithdraw()">⬇ WITHDRAW</button>
           <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray);" onclick="bankWithdrawAll()">ALL OUT</button>
         </div>
+      </div>
+    </div>
+
+    <!-- PAWN SHOP -->
+    <div class="card" style="border-color:rgba(255,166,0,0.4);margin-top:12px;">
+      <div class="card-title" style="color:var(--orange);">🏪 PAWN SHOP</div>
+      <div style="font-size:13px;color:var(--gray);margin-bottom:14px;">Pawn your cards, badges or passes for instant cash. Get them back within 7 days + 3%/day fee. Miss Day 8 — item gone forever.</div>
+      <!-- Active pawns -->
+      <div id="pawn-active-list" style="margin-bottom:14px;"></div>
+      <!-- Pawn new item -->
+      <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:14px;">
+        <div style="font-family:'Bebas Neue',cursive;font-size:17px;letter-spacing:1.5px;color:var(--orange);margin-bottom:12px;">PAWN AN ITEM</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <button class="btn btn-sm" id="pawn-type-card" onclick="setPawnType('card')" style="background:var(--orange);color:#000;">🚗 Card</button>
+          <button class="btn btn-sm" id="pawn-type-badge" onclick="setPawnType('badge')" style="background:var(--bg);border:1px solid var(--border);color:var(--gray);">🏅 Badge</button>
+          <button class="btn btn-sm" id="pawn-type-pass" onclick="setPawnType('pass')" style="background:var(--bg);border:1px solid var(--border);color:var(--gray);">🎟️ Pass</button>
+        </div>
+        <div id="pawn-item-select" style="margin-bottom:10px;"></div>
+        <div id="pawn-preview" style="font-size:14px;color:var(--cyan);margin-bottom:10px;min-height:20px;"></div>
+        <button class="btn btn-orange btn-full" onclick="confirmPawn()">🤝 PAWN IT</button>
       </div>
     </div>
   </div>
@@ -1383,6 +1412,8 @@ let pass_data=S.get('pass_data',{passes:[],inventory:{},claimedDates:{}});
     state.daily_xp=0;
     state.last_reset=today;
     state._lastRawScore=null; // clear stale audit score
+    // Bank daily snapshot for interest calculation
+    setTimeout(_bankDailySnapshot,600);
     // Reset all missions (fresh day)
     const tickedYesterday=Object.keys(missions_status).filter(k=>missions_status[k]==='done');
     const _resetStreaks=()=>{if(typeof STREAK_MISSIONS!=='undefined'){STREAK_MISSIONS.forEach(m=>{if(!tickedYesterday.includes(m)){if(streaks[m])streaks[m].count=0;}});S.set('streaks',streaks);}};
@@ -2921,10 +2952,59 @@ window.buyPassWithCash=buyPassWithCash;
 window.usePass=usePass;
 
 // ═══════════════════════════════════════════
-// BANK SYSTEM
 // ═══════════════════════════════════════════
+// BANK SYSTEM — Savings Interest + Pawn Shop
+// ═══════════════════════════════════════════
+
+// ── Core balance helpers ──
 function getBankBalance(){return S.get('bank_balance',0);}
-function _setBankBalance(v){S.set('bank_balance',v);}
+function _setBankBalance(v){S.set('bank_balance',Math.max(0,Math.round(v)));}
+
+// ── Savings Interest helpers ──
+// Stores: {snapshots:[{date,balance},...], pendingInterest:0, weekStart:date}
+function _getBankMeta(){return S.get('bank_meta',{snapshots:[],pendingInterest:0,weekStart:todayStr()});}
+function _setBankMeta(m){S.set('bank_meta',m);}
+
+function _bankDailySnapshot(){
+  // Called once per day (checked via last_snapshot_date stored in meta)
+  const meta=_getBankMeta();
+  const today=todayStr();
+  // Avoid double-snapping same day
+  if(meta.lastSnapDate===today)return;
+  meta.lastSnapDate=today;
+  if(!meta.weekStart)meta.weekStart=today;
+  if(!meta.snapshots)meta.snapshots=[];
+  if(!meta.pendingInterest)meta.pendingInterest=0;
+
+  const balance=getBankBalance();
+  meta.snapshots.push({date:today,balance});
+
+  // Check if 7 snapshots collected → compute weekly interest
+  if(meta.snapshots.length>=7){
+    const avg=Math.round(meta.snapshots.reduce((s,x)=>s+x.balance,0)/meta.snapshots.length);
+    if(avg>=100){
+      // 10% interest on average balance
+      const interest=Math.round(avg*0.10);
+      meta.pendingInterest=(meta.pendingInterest||0)+interest;
+    }
+    // Reset for next week
+    meta.snapshots=[];
+    meta.weekStart=today;
+  }
+  _setBankMeta(meta);
+}
+
+function collectInterest(){
+  const meta=_getBankMeta();
+  const pending=meta.pendingInterest||0;
+  if(!pending){toast('No interest to collect yet!');return;}
+  state.cash+=pending;
+  meta.pendingInterest=0;
+  _setBankMeta(meta);
+  S.set('state',state);
+  updateUI();renderBank();
+  toast(`💰 Collected ${pending} coins interest!`);
+}
 
 function renderBank(){
   const bank=getBankBalance();
@@ -2933,6 +3013,36 @@ function renderBank(){
   const bsv=document.getElementById('bank-saved-val');if(bsv)bsv.textContent=bank.toLocaleString();
   const btv=document.getElementById('bank-total-val');if(btv)btv.textContent=(wallet+bank).toLocaleString();
   const sbd=document.getElementById('shop-bank-disp');if(sbd)sbd.textContent=bank.toLocaleString();
+
+  // Interest banner
+  const meta=_getBankMeta();
+  const pending=meta.pendingInterest||0;
+  const banner=document.getElementById('bank-interest-banner');
+  const amountEl=document.getElementById('bank-interest-amount');
+  const infoEl=document.getElementById('bank-interest-info');
+  if(banner){
+    if(pending>0){
+      banner.style.display='flex';
+      if(amountEl)amountEl.textContent=`+${pending} coins earned from weekly average balance`;
+    } else {
+      banner.style.display='none';
+    }
+  }
+  if(infoEl){
+    const snaps=meta.snapshots||[];
+    const daysLeft=7-snaps.length;
+    const minOk=bank>=100;
+    if(pending>0){
+      infoEl.textContent='';
+    } else if(!minOk){
+      infoEl.textContent='⚠️ Balance below 100 — no interest this week if it stays low';
+    } else {
+      infoEl.textContent=`📅 ${snaps.length}/7 days tracked this week · ${daysLeft} day${daysLeft!==1?'s':''} until interest calculation`;
+    }
+  }
+
+  // Pawn shop
+  _renderPawnShop();
 }
 
 function bankDeposit(){
@@ -2976,6 +3086,334 @@ window.bankDeposit=bankDeposit;
 window.bankDepositAll=bankDepositAll;
 window.bankWithdraw=bankWithdraw;
 window.bankWithdrawAll=bankWithdrawAll;
+window.collectInterest=collectInterest;
+
+// ── Run daily snapshot on app load ──
+setTimeout(_bankDailySnapshot,500);
+
+// ═══════════════════════════════════════════
+// PAWN SHOP
+// ═══════════════════════════════════════════
+
+// Card valuation: (packPrice + scarcityBonus) * level
+// packPrice = standard chest basePrice (250)
+// scarcityBonus = packPrice * (rarityGap between D and card tier) / 100
+// rarityGap defined as: D=0, C=20, B=40, A=60, S=80
+const PAWN_TIER_GAP={D:0,C:20,B:40,A:60,S:80};
+
+function _cardPawnValue(carId){
+  // Must be called inside car collection scope — access via window
+  const cars=window._PAWN_CARS||[];
+  const car=cars.find(c=>c.id===carId);
+  if(!car)return 0;
+  const inv=window._PAWN_CARD_INV||{};
+  const level=inv[carId]||0;
+  if(!level)return 0;
+  const basePackPrice=250; // standard chest base price
+  const gap=PAWN_TIER_GAP[car.tier]||0;
+  const scarcityBonus=Math.round(basePackPrice*(gap/100));
+  const cardValue=(basePackPrice+scarcityBonus)*level;
+  return Math.round(cardValue*0.80); // 80% pawn rate
+}
+
+function _badgePawnValue(badgeId){
+  const b=BADGES.find(x=>x.id===badgeId);
+  if(!b)return 0;
+  return Math.round((b.cost||0)*0.80);
+}
+
+function _passPawnValue(passId,qty){
+  const p=(pass_data.passes||[]).find(x=>x.id===passId);
+  if(!p)return 0;
+  const price=getPassCashPrice(p)||0;
+  return Math.round(price*qty*0.80);
+}
+
+// _pawnData: [{id, type, itemId, itemName, qty, pawnedValue, pawnDate, daysElapsed}]
+function _getPawnData(){return S.get('pawn_data',[]);}
+function _setPawnData(d){S.set('pawn_data',d);}
+
+// Check for expired pawns on load
+function _checkExpiredPawns(){
+  const today=todayStr();
+  const pawns=_getPawnData();
+  const alive=[];
+  let changed=false;
+  pawns.forEach(p=>{
+    const days=_daysSince(p.pawnDate,today);
+    if(days>=8){
+      // Gone forever
+      toast(`💀 "${p.itemName}" was not reclaimed and is gone forever!`);
+      changed=true;
+    } else {
+      alive.push(p);
+    }
+  });
+  if(changed)_setPawnData(alive);
+}
+
+function _daysSince(dateStr,todayStr2){
+  const a=new Date(dateStr);
+  const b=new Date(todayStr2);
+  return Math.floor((b-a)/(1000*60*60*24));
+}
+
+let _pawnType='card';
+
+function setPawnType(type){
+  _pawnType=type;
+  ['card','badge','pass'].forEach(t=>{
+    const btn=document.getElementById('pawn-type-'+t);
+    if(btn){
+      if(t===type){btn.style.background='var(--orange)';btn.style.color='#000';btn.style.borderColor='var(--orange)';}
+      else{btn.style.background='var(--bg)';btn.style.color='var(--gray)';btn.style.borderColor='var(--border)';}
+    }
+  });
+  _renderPawnItemSelect();
+}
+
+function _renderPawnItemSelect(){
+  const el=document.getElementById('pawn-item-select');
+  const preview=document.getElementById('pawn-preview');
+  if(!el)return;
+  el.innerHTML='';
+  if(preview)preview.textContent='';
+
+  if(_pawnType==='card'){
+    const cars=window._PAWN_CARS||[];
+    const inv=window._PAWN_CARD_INV||{};
+    const owned=cars.filter(c=>(inv[c.id]||0)>0);
+    if(!owned.length){el.innerHTML='<div style="color:var(--gray);font-size:14px;">No cards owned.</div>';return;}
+    const sel=document.createElement('select');
+    sel.id='pawn-item-val';
+    sel.style.cssText="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;";
+    sel.innerHTML='<option value="">Select a card...</option>'+owned.map(c=>{
+      const lv=inv[c.id]||0;
+      const val=_cardPawnValue(c.id);
+      return `<option value="${c.id}">${c.name} (Lv${lv} · ${c.tier}-tier) — get ${val} 💰</option>`;
+    }).join('');
+    sel.onchange=_updatePawnPreview;
+    el.appendChild(sel);
+
+  } else if(_pawnType==='badge'){
+    const ownedBadges=BADGES.filter(b=>badge_data.owned.includes(b.id));
+    if(!ownedBadges.length){el.innerHTML='<div style="color:var(--gray);font-size:14px;">No badges owned.</div>';return;}
+    const sel=document.createElement('select');
+    sel.id='pawn-item-val';
+    sel.style.cssText="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;";
+    sel.innerHTML='<option value="">Select a badge...</option>'+ownedBadges.map(b=>{
+      const val=_badgePawnValue(b.id);
+      return `<option value="${b.id}">${b.emoji} ${b.name} — get ${val} 💰</option>`;
+    }).join('');
+    sel.onchange=_updatePawnPreview;
+    el.appendChild(sel);
+
+  } else if(_pawnType==='pass'){
+    const passes=(pass_data.passes||[]).filter(p=>(pass_data.inventory[p.id]||0)>0);
+    if(!passes.length){el.innerHTML='<div style="color:var(--gray);font-size:14px;">No passes owned.</div>';return;}
+    const wrap=document.createElement('div');
+    wrap.style.display='flex';wrap.style.gap='8px';wrap.style.flexWrap='wrap';
+    const sel=document.createElement('select');
+    sel.id='pawn-item-val';
+    sel.style.cssText="flex:1;min-width:120px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;";
+    sel.innerHTML='<option value="">Select pass...</option>'+passes.map(p=>{
+      const owned=pass_data.inventory[p.id]||0;
+      return `<option value="${p.id}">${p.name} (own ${owned})</option>`;
+    }).join('');
+    sel.onchange=_updatePawnPreview;
+    const qtyWrap=document.createElement('div');
+    qtyWrap.style.cssText='display:flex;align-items:center;gap:6px;';
+    qtyWrap.innerHTML='<span style="font-size:13px;color:var(--gray);">Qty:</span>';
+    const qtyInp=document.createElement('input');
+    qtyInp.type='number';qtyInp.id='pawn-pass-qty';qtyInp.min='1';qtyInp.value='1';
+    qtyInp.style.cssText="width:60px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;";
+    qtyInp.oninput=_updatePawnPreview;
+    qtyWrap.appendChild(qtyInp);
+    wrap.appendChild(sel);wrap.appendChild(qtyWrap);
+    el.appendChild(wrap);
+  }
+}
+
+function _updatePawnPreview(){
+  const preview=document.getElementById('pawn-preview');
+  if(!preview)return;
+  const sel=document.getElementById('pawn-item-val');
+  if(!sel||!sel.value){preview.textContent='';return;}
+  let val=0;
+  if(_pawnType==='card'){val=_cardPawnValue(sel.value);}
+  else if(_pawnType==='badge'){val=_badgePawnValue(sel.value);}
+  else if(_pawnType==='pass'){
+    const qty=Math.max(1,parseInt(document.getElementById('pawn-pass-qty')?.value)||1);
+    val=_passPawnValue(sel.value,qty);
+  }
+  if(val>0){preview.textContent=`You will receive: ${val} 💰 instantly. Buyback starts at ${val} + 3%/day.`;}
+  else{preview.textContent='Item has no value to pawn.';}
+}
+
+function confirmPawn(){
+  const sel=document.getElementById('pawn-item-val');
+  if(!sel||!sel.value){toast('Select an item first!');return;}
+  const itemId=sel.value;
+  let pawnedValue=0,itemName='',qty=1;
+
+  let _savedCardLevel=0;
+  if(_pawnType==='card'){
+    pawnedValue=_cardPawnValue(itemId);
+    const cars=window._PAWN_CARS||[];
+    const car=cars.find(c=>c.id===itemId);
+    itemName=car?car.name:itemId;
+    _savedCardLevel=(window._PAWN_CARD_INV||{})[itemId]||1;
+  } else if(_pawnType==='badge'){
+    pawnedValue=_badgePawnValue(itemId);
+    const b=BADGES.find(x=>x.id===itemId);
+    itemName=b?`${b.emoji} ${b.name}`:itemId;
+  } else if(_pawnType==='pass'){
+    qty=Math.max(1,parseInt(document.getElementById('pawn-pass-qty')?.value)||1);
+    const maxOwned=pass_data.inventory[itemId]||0;
+    if(qty>maxOwned){toast(`You only own ${maxOwned} of this pass!`);return;}
+    pawnedValue=_passPawnValue(itemId,qty);
+    const p=(pass_data.passes||[]).find(x=>x.id===itemId);
+    itemName=p?p.name:itemId;
+    if(qty>1)itemName+=` x${qty}`;
+  }
+
+  if(!pawnedValue){toast('This item has no cash value to pawn!');return;}
+  if(!confirm(`Pawn "${itemName}" for ${pawnedValue} 💰? You have 7 days to buy back. After Day 7 it is gone forever.`))return;
+
+  // Remove item from inventory
+  if(_pawnType==='card'){
+    const inv=S.get('card_inv',{});
+    const level=inv[itemId]||0;
+    pawn.cardLevel=level; // store for restore
+    inv[itemId]=0;
+    S.set('card_inv',inv);
+    window._PAWN_CARD_INV=inv;
+  } else if(_pawnType==='badge'){
+    badge_data.owned=badge_data.owned.filter(id=>id!==itemId);
+    if(badge_data.equipped===itemId)badge_data.equipped=null;
+    S.set('badges',badge_data);
+  } else if(_pawnType==='pass'){
+    pass_data.inventory[itemId]=(pass_data.inventory[itemId]||0)-qty;
+    if(pass_data.inventory[itemId]<0)pass_data.inventory[itemId]=0;
+    S.set('pass_data',pass_data);
+  }
+
+  // Add cash
+  state.cash+=pawnedValue;
+  S.set('state',state);
+
+  // Record pawn
+  const pawns=_getPawnData();
+  pawns.push({
+    id:'pawn_'+Date.now(),
+    type:_pawnType,
+    itemId,
+    itemName,
+    qty,
+    pawnedValue,
+    cardLevel:_savedCardLevel,
+    pawnDate:todayStr()
+  });
+  _setPawnData(pawns);
+
+  updateUI();renderBank();
+  toast(`🤝 Pawned "${itemName}" for ${pawnedValue} 💰!`);
+}
+
+function redeemPawn(pawnId){
+  const pawns=_getPawnData();
+  const idx=pawns.findIndex(p=>p.id===pawnId);
+  if(idx<0){toast('Pawn not found!');return;}
+  const pawn=pawns[idx];
+  const today=todayStr();
+  const days=_daysSince(pawn.pawnDate,today);
+  if(days>=8){toast('Too late! Item is gone forever.');pawns.splice(idx,1);_setPawnData(pawns);renderBank();return;}
+  const fee=Math.round(pawn.pawnedValue*0.03*days);
+  const total=pawn.pawnedValue+fee;
+  if(state.cash<total){toast(`Need ${total} 💰 to redeem (${pawn.pawnedValue} + ${fee} fee). You have ${state.cash}.`);return;}
+  if(!confirm(`Redeem "${pawn.itemName}"? Cost: ${total} 💰 (${pawn.pawnedValue} + ${fee} fee for ${days} day${days!==1?'s':''})`))return;
+
+  state.cash-=total;
+  S.set('state',state);
+
+  // Restore item
+  if(pawn.type==='card'){
+    const inv=window._PAWN_CARD_INV||{};
+    // Restore to original level — stored in pawn record
+    inv[pawn.itemId]=pawn.cardLevel||1;
+    S.set('card_inv',inv);
+    if(window._pawnRestoreCardLevel)window._pawnRestoreCardLevel(pawn.itemId,pawn.cardLevel||1);
+  } else if(pawn.type==='badge'){
+    if(!badge_data.owned.includes(pawn.itemId))badge_data.owned.push(pawn.itemId);
+    S.set('badges',badge_data);
+  } else if(pawn.type==='pass'){
+    pass_data.inventory[pawn.itemId]=(pass_data.inventory[pawn.itemId]||0)+pawn.qty;
+    S.set('pass_data',pass_data);
+  }
+
+  pawns.splice(idx,1);
+  _setPawnData(pawns);
+  updateUI();renderBank();
+  toast(`✅ "${pawn.itemName}" redeemed!`);
+}
+
+function _renderPawnShop(){
+  const activeList=document.getElementById('pawn-active-list');
+  if(!activeList)return;
+  const today=todayStr();
+  const pawns=_getPawnData();
+  const alive=pawns.filter(p=>_daysSince(p.pawnDate,today)<8);
+
+  if(!alive.length){
+    activeList.innerHTML='<div style="font-size:13px;color:var(--gray);margin-bottom:8px;">No active pawns.</div>';
+  } else {
+    activeList.innerHTML=alive.map(p=>{
+      const days=_daysSince(p.pawnDate,today);
+      const daysLeft=7-days;
+      const fee=Math.round(p.pawnedValue*0.03*days);
+      const total=p.pawnedValue+fee;
+      const urgency=daysLeft<=1?'var(--red)':daysLeft<=3?'var(--orange)':'var(--cyan)';
+      return `<div style="background:rgba(255,166,0,.08);border:1px solid rgba(255,166,0,.3);border-radius:8px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-family:'Bebas Neue',cursive;font-size:17px;color:var(--orange);">${p.itemName}</div>
+            <div style="font-size:13px;color:var(--gray);">Pawned for ${p.pawnedValue} 💰 · Day ${days}</div>
+            <div style="font-size:13px;color:${urgency};font-weight:700;">${daysLeft>0?`${daysLeft} day${daysLeft!==1?'s':''} left`:'⚠️ Last day!'} · Buyback: ${total} 💰</div>
+          </div>
+          <button class="btn btn-sm" style="background:var(--orange);color:#000;" onclick="redeemPawn('${p.id}')">REDEEM</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Refresh item select if visible
+  _renderPawnItemSelect();
+}
+
+window.setPawnType=setPawnType;
+window.confirmPawn=confirmPawn;
+window.redeemPawn=redeemPawn;
+
+// ── Hook pawn shop into car collection module ──
+// We expose car inventory to pawn shop once the car module initializes
+setTimeout(()=>{
+  _checkExpiredPawns();
+  // Try to grab car collection refs
+  if(typeof COLLECTION_CARS!=='undefined'){
+    window._PAWN_CARS=COLLECTION_CARS;
+  }
+  // car_inventory key used by car collection module
+  const storedCarInv=S.get('card_inv',{});
+  window._PAWN_CARD_INV=S.get('card_inv',{});
+  // Expose restore helper so redeem can write back
+  window._pawnRestoreCardLevel=function(carId,level){
+    const inv=S.get('card_inv',{});
+    inv[carId]=level;
+    S.set('card_inv',inv);
+    window._PAWN_CARD_INV=inv;
+  };
+  setPawnType('card');
+},800);
 
 // ═══════════════════════════════════════════
 // QUICK START MISSIONS
