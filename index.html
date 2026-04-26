@@ -1110,20 +1110,8 @@ select{-webkit-appearance:none;appearance:none;}
   <!-- Change Password -->
   <div class="card">
     <div style="font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:1px;margin-bottom:6px;color:var(--white);">🔒 CHANGE PASSWORD</div>
-    <div style="font-size:13px;color:var(--gray);margin-bottom:12px;">Enter new password below.</div>
-    <div class="log-field">
-      <label>New Password</label>
-      <input type="password" id="settings-pw1" placeholder="Min 6 characters"
-        style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;padding:10px 12px;width:100%;outline:none;"
-        onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'">
-    </div>
-    <div class="log-field">
-      <label>Confirm New Password</label>
-      <input type="password" id="settings-pw2" placeholder="Repeat new password"
-        style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;padding:10px 12px;width:100%;outline:none;"
-        onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'">
-    </div>
-    <button class="btn btn-purple" onclick="settingsUpdatePassword()">🔒 Save New Password</button>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:12px;">A reset link will be sent to your email. Click it to set a new password.</div>
+    <button class="btn btn-purple" onclick="settingsUpdatePassword()">📧 Send Reset Link</button>
   </div>
 
   <!-- Change Email -->
@@ -4408,7 +4396,7 @@ function colRevealNext() {
       '<div><div style="color:var(--gray);font-size:11px;letter-spacing:1.5px;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Email</div><div style="font-size:18px;color:var(--white);font-weight:700;">'+user.email+'</div></div>'+
       '</div>';
     _settingsMsg('','');
-    ['settings-uname','settings-pw1','settings-pw2','settings-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['settings-uname','settings-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   }
 
   function _settingsMsg(msg,color){
@@ -4429,26 +4417,28 @@ function colRevealNext() {
     }
   }
 
+  let _pwResetCooldown=0;
   async function settingsUpdatePassword(){
-    const pw1=document.getElementById('settings-pw1').value;
-    const pw2=document.getElementById('settings-pw2').value;
-    if(!pw1||!pw2){_settingsMsg('Fill both fields','#ff3838');return;}
-    if(pw1.length<6){_settingsMsg('Min 6 characters','#ff3838');return;}
-    if(pw1!==pw2){_settingsMsg('Passwords don\'t match','#ff3838');return;}
-    _settingsMsg('Sending reset link...','#888aaa');
+    const now=Date.now();
+    if(now<_pwResetCooldown){const s=Math.ceil((_pwResetCooldown-now)/1000);_settingsMsg('Wait '+s+'s before trying again.','#ffa502');return;}
     const user=window._supaUser;
+    if(!user){_settingsMsg('Not logged in.','#ff3838');return;}
+    _settingsMsg('Sending reset link...','#888aaa');
     const{error}=await supa.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+window.location.pathname});
     if(error){_settingsMsg(error.message,'#ff3838');}
-    else{_settingsMsg('📧 Reset link sent to your email — click it to set the new password!','#00d2a0');document.getElementById('settings-pw1').value='';document.getElementById('settings-pw2').value='';}
+    else{_pwResetCooldown=Date.now()+60000;_settingsMsg('📧 Reset link sent to '+user.email+' — click it to set your new password.','#00d2a0');}
   }
+  let _emailChangeCooldown=0;
   async function settingsUpdateEmail(){
     const em=document.getElementById('settings-email').value.trim();
     if(!em){_settingsMsg('Enter new email','#ff3838');return;}
     if(!/^[^@]+@[^@]+\.[^@]+$/.test(em)){_settingsMsg('Enter a valid email','#ff3838');return;}
+    const _now=Date.now();
+    if(_now<_emailChangeCooldown){const _s=Math.ceil((_emailChangeCooldown-_now)/1000);_settingsMsg('Wait '+_s+'s before trying again.','#ffa502');return;}
     _settingsMsg('Sending confirmation links...','#888aaa');
     const{error}=await supa.auth.updateUser({email:em,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
     if(error){_settingsMsg(error.message,'#ff3838');}
-    else{_settingsMsg('📧 Confirmation links sent to both your old & new email — click both to confirm!','#00d2a0');}
+    else{_emailChangeCooldown=Date.now()+60000;_settingsMsg('📧 Confirmation sent to both emails — click both links to confirm!','#00d2a0');}
   }
   async function settingsResetData(){
     const confirmMsg=
@@ -4733,13 +4723,16 @@ window.authLogin=async function(){
 window.authLogout=async function(){
   await supa.auth.signOut();
 };
+let _forgotPwCooldown=0;
 window.authForgotPw=async function(){
   const email=document.getElementById('auth-email').value.trim();
   if(!email){_authMsg('Enter your email above first','#ff3838');return;}
+  const _now=Date.now();
+  if(_now<_forgotPwCooldown){const _s=Math.ceil((_forgotPwCooldown-_now)/1000);_authMsg('Wait '+_s+'s before requesting again.','#ffa502');return;}
   _authMsg('Sending reset link…','#888aaa');
   const{error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
   if(error){_authMsg(error.message,'#ff3838');}
-  else{_authMsg('✅ Reset link sent! Check your email.','#00d2a0');}
+  else{_forgotPwCooldown=Date.now()+60000;_authMsg('✅ Reset link sent! Check your email.','#00d2a0');}
 };
 function _authMsg(msg,color){
   const el=document.getElementById('auth-msg');
