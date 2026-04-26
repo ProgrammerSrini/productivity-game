@@ -4611,6 +4611,7 @@ function colRevealNext() {
 // ── Auth state watcher ──
 supa.auth.onAuthStateChange((event,session)=>{
   if(event==='PASSWORD_RECOVERY'){
+    window._authFlowActive=true;
     // User clicked reset link — show set new password UI
     document.getElementById('auth-screen').style.display='flex';
     document.getElementById('nav').style.display='none';
@@ -4627,6 +4628,7 @@ supa.auth.onAuthStateChange((event,session)=>{
       const{error}=await supa.auth.updateUser({password:pw});
       if(error){_authMsg(error.message,'#ff3838');}
       else{
+        window._authFlowActive=false;
         _authMsg('✅ Password updated! Logging you in...','#00d2a0');
         setTimeout(()=>{
           const s=supa.auth.getSession();
@@ -4637,6 +4639,15 @@ supa.auth.onAuthStateChange((event,session)=>{
     document.getElementById('auth-toggle-txt').style.display='none';
     document.getElementById('auth-forgot-txt').style.display='none';
     _authMsg('Enter your new password below','#00d2a0');
+    return;
+  }
+  if(event==='USER_UPDATED'){
+    // Email change confirmed — session is now updated, boot the app
+    if(window._authFlowActive)window._authFlowActive=false;
+    if(session?.user){
+      _authMsg('✅ Email confirmed! Logging you in...','#00d2a0');
+      setTimeout(()=>_initApp(session.user),800);
+    }
     return;
   }
   if(session?.user){
@@ -4653,12 +4664,20 @@ supa.auth.onAuthStateChange((event,session)=>{
 });
 
 // ── Fallback: manually check session in case onAuthStateChange fires too late ──
-// This is critical on Netlify where hash-based auth redirects can be missed.
 setTimeout(async()=>{
   if(window._supaUser)return; // already handled by onAuthStateChange
+  if(window._authFlowActive)return; // password recovery or email change in progress — don't boot
   const{data:{session}}=await supa.auth.getSession();
   if(session?.user){
     if(window._supaUser&&window._supaUser.id===session.user.id)return;
+    // Check if this session came from a recovery/email-change link
+    const hash=window.location.hash||'';
+    const params=new URLSearchParams(window.location.search);
+    const flowType=params.get('type')||'';
+    if(hash.includes('type=recovery')||hash.includes('type=email_change')||flowType==='recovery'||flowType==='email_change'){
+      // Don't boot — let onAuthStateChange handle it
+      return;
+    }
     _initApp(session.user);
   } else {
     // No session and no auth state change yet — show auth screen
