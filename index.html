@@ -1232,7 +1232,7 @@ select{-webkit-appearance:none;appearance:none;}
         if(auth) auth.style.display = 'flex';
         var msg = document.createElement('div');
         msg.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #ff3838;color:#ff3838;padding:10px 20px;border-radius:8px;font-family:sans-serif;font-size:13px;z-index:9999;text-align:center;max-width:320px;';
-        msg.innerHTML = '⚠️ Could not connect to server.<br>Please wait or try reloading';
+        msg.innerHTML = '⚠️ Could not connect to server.<br>Please wait or try reloading the page';
         document.body.appendChild(msg);
         setTimeout(function(){ msg.remove(); }, 6000);
       }
@@ -1466,9 +1466,6 @@ let pass_data=S.get('pass_data',{passes:[],inventory:{},claimedDates:{}});
       });
       _savePassData&&_savePassData();
     }
-
-    // ── PAWN EXPIRY CHECK: also run on daily reset (not just on load) ──
-    _checkExpiredPawns&&_checkExpiredPawns();
   }
 
   // ── WEEKLY RESET ─────────────────────────
@@ -3034,9 +3031,10 @@ function renderBank(){
   if(banner)banner.style.display='none'; // no manual collect needed
   if(infoEl){
     const minOk=bank>=100;
-    infoEl.innerHTML=minOk
-      ?`✅ Balance above 100 — 2% interest will auto-credit each weekly reset`
-      :`⚠️ Balance below 100 — <strong style="color:var(--red)">interest paused this week</strong>`;
+    const paused=iMeta.belowThreshold||!minOk;
+    infoEl.innerHTML=paused
+      ?`⚠️ Interest <strong style="color:var(--red)">PAUSED this week</strong> — balance dipped below 100 at some point this week${minOk?' (even though it recovered)':''}`
+      :`✅ Balance above 100 — 2% interest will auto-credit at weekly reset`;
   }
   renderInterestLog();
 
@@ -3381,7 +3379,7 @@ function _renderPawnShop(){
   } else {
     activeList.innerHTML=alive.map(p=>{
       const days=_daysSince(p.pawnDate,today);
-      const displayDay=days+1;
+      const displayDay=Math.max(1,days);
       const daysLeft=7-days;
       const fee=Math.round(p.pawnedValue*0.03*days);
       const total=p.pawnedValue+fee;
