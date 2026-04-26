@@ -1466,6 +1466,9 @@ let pass_data=S.get('pass_data',{passes:[],inventory:{},claimedDates:{}});
       });
       _savePassData&&_savePassData();
     }
+
+    // ── PAWN EXPIRY CHECK: also run on daily reset (not just on load) ──
+    _checkExpiredPawns&&_checkExpiredPawns();
   }
 
   // ── WEEKLY RESET ─────────────────────────
@@ -3379,7 +3382,7 @@ function _renderPawnShop(){
   } else {
     activeList.innerHTML=alive.map(p=>{
       const days=_daysSince(p.pawnDate,today);
-      const displayDay=Math.max(1,days);
+      const displayDay=days+1;
       const daysLeft=7-days;
       const fee=Math.round(p.pawnedValue*0.03*days);
       const total=p.pawnedValue+fee;
