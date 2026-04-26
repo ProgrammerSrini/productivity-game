@@ -4437,7 +4437,7 @@ function colRevealNext() {
     if(pw1!==pw2){_settingsMsg('Passwords don\'t match','#ff3838');return;}
     _settingsMsg('Sending reset link...','#888aaa');
     const user=window._supaUser;
-    const{error}=await supa.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+window.location.pathname});
+    const{error}=await supa.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+window.location.pathname.replace(/\/+$/,'')});
     if(error){_settingsMsg(error.message,'#ff3838');}
     else{_settingsMsg('📧 Reset link sent to your email — click it to set the new password!','#00d2a0');document.getElementById('settings-pw1').value='';document.getElementById('settings-pw2').value='';}
   }
@@ -4609,15 +4609,6 @@ function colRevealNext() {
 } // end _bootApp
 
 // ── Auth state watcher ──
-// ── Eagerly detect recovery flow from URL before any Supabase event fires ──
-(()=>{
-  const h=window.location.hash||'';
-  const p=new URLSearchParams(window.location.search);
-  if(h.includes('type=recovery')||p.get('type')==='recovery'){
-    window._authFlowActive=true;
-  }
-})();
-
 supa.auth.onAuthStateChange((event,session)=>{
   if(event==='PASSWORD_RECOVERY'){
     window._authFlowActive=true;
@@ -4660,9 +4651,8 @@ supa.auth.onAuthStateChange((event,session)=>{
     return;
   }
   if(session?.user){
-    // Prevent re-initializing if already loaded or during recovery flow
+    // Prevent re-initializing if already loaded (causes flicker on OTP verify)
     if(window._supaUser&&window._supaUser.id===session.user.id)return;
-    if(window._authFlowActive)return; // recovery/email-change in progress — don't boot
     _initApp(session.user);
   } else {
     window._supaUser=null;
@@ -4747,7 +4737,7 @@ window.authForgotPw=async function(){
   const email=document.getElementById('auth-email').value.trim();
   if(!email){_authMsg('Enter your email above first','#ff3838');return;}
   _authMsg('Sending reset link…','#888aaa');
-  const{error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  const{error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname.replace(/\/+$/,'')});
   if(error){_authMsg(error.message,'#ff3838');}
   else{_authMsg('✅ Reset link sent! Check your email.','#00d2a0');}
 };
