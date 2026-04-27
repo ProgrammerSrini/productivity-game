@@ -770,10 +770,40 @@ select{-webkit-appearance:none;appearance:none;}
 <!-- STREAKS -->
 <div id="screen-streaks" class="screen">
   <div class="card">
-    <div class="card-title">🔥 STREAKS</div>
-    <div style="font-size:14px;color:var(--gray)">Auto-updates when you submit your daily log. Complete missions → streaks grow. Miss a day → streak resets.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div class="card-title" style="margin-bottom:0;">🔥 STREAKS</div>
+      <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--purple);color:var(--purple);" onclick="openStreakEditor()">✏️ Edit Streaks</button>
+    </div>
   </div>
   <div id="streak-groups"></div>
+</div>
+
+<!-- STREAK EDITOR OVERLAY -->
+<div id="streak-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:400;overflow-y:auto;padding:14px;backdrop-filter:blur(4px);">
+<div style="max-width:600px;margin:auto;background:var(--bg3);border:1px solid var(--purple);border-radius:12px;padding:22px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div style="font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:2px;color:var(--purple);">✏️ EDIT STREAKS</div>
+    <button onclick="closeStreakEditor()" style="background:transparent;border:1px solid var(--border);color:var(--gray);border-radius:6px;width:34px;height:34px;font-size:18px;cursor:pointer;">✕</button>
+  </div>
+  <!-- Tabs -->
+  <div class="tabs" style="margin-bottom:16px;">
+    <div class="tab active" id="setab-featured" onclick="switchSeTab('featured')">⭐ Featured</div>
+    <div class="tab" id="setab-groups" onclick="switchSeTab('groups')">📁 Groups</div>
+  </div>
+  <!-- Featured tab -->
+  <div id="sesub-featured">
+    <div style="font-size:14px;color:var(--gray);margin-bottom:10px;">Pick which missions show in the Featured view. All tracked missions appear here.</div>
+    <div id="se-featured-list" style="max-height:380px;overflow-y:auto;"></div>
+    <button class="btn btn-purple btn-full" style="margin-top:12px;" onclick="saveStreakFeatured()">💾 Save Featured</button>
+  </div>
+  <!-- Groups tab -->
+  <div id="sesub-groups" style="display:none;">
+    <div style="font-size:14px;color:var(--gray);margin-bottom:10px;">Edit group labels, colors, move missions between groups, or add new groups.</div>
+    <div id="se-groups-list" style="max-height:380px;overflow-y:auto;"></div>
+    <button class="btn btn-sm" onclick="addStreakGroup()" style="margin-top:10px;background:var(--bg4);border:1px solid var(--cyan);color:var(--cyan);width:100%;">➕ Add New Group</button>
+    <button class="btn btn-purple btn-full" style="margin-top:8px;" onclick="saveStreakGroups()">💾 Save Groups</button>
+  </div>
+</div>
 </div>
 
 <!-- CASH SHOP -->
@@ -1381,6 +1411,29 @@ let weekly_data=S.get('weekly',{});
 let badge_data=S.get('badges',{owned:[],equipped:null});
 let pass_data=S.get('pass_data',{passes:[],inventory:{},claimedDates:{}});
 
+// Re-initialise streak groups/featured now that Supabase data is loaded into S
+STREAK_GROUPS=S.get('streak_groups',null)||STREAK_GROUPS_DEFAULT.map(g=>({...g,missions:[...g.missions]}));
+STREAK_FEATURED=S.get('streak_featured',null)||[...STREAK_FEATURED_DEFAULT];
+// Keep window refs in sync so streak editor (outside _bootApp) always sees the live arrays
+window.STREAK_GROUPS=STREAK_GROUPS;
+window.STREAK_FEATURED=STREAK_FEATURED;
+
+
+// ── BADGES must be defined before the auto-reset IIFE (applyBonus → getEquippedBadge uses it on gamble win) ──
+const BADGES=[
+  {id:"bronze",name:"Bronze",emoji:"🥉",cost:800,color:"#b5651d",bonus:0.10},
+  {id:"silver",name:"Silver",emoji:"🥈",cost:2500,color:"#9aa0a6",bonus:0.20},
+  {id:"gold",name:"Gold",emoji:"🥇",cost:6000,color:"#c9a84c",bonus:0.30},
+  {id:"platinum",name:"Platinum",emoji:"🪨",cost:14000,color:"#c8e0f0",bonus:0.45},
+  {id:"emerald",name:"Emerald",emoji:"💚",cost:32000,color:"#2e8b57",bonus:0.60},
+  {id:"diamond",name:"Diamond",emoji:"💎",cost:72000,color:"#4a90c4",bonus:0.75},
+  {id:"alpha",name:"Alpha",emoji:"🗡️",cost:160000,color:"#8B5A2B",bonus:0.90},
+  {id:"omega",name:"Omega",emoji:"🐉",cost:350000,color:"#cc2200",bonus:1.00},
+];
+
+// ── toast must be available before the auto-reset IIFE runs (it calls toast for boss/gamble/pawn) ──
+let toastTimer;
+function toast(msg,dur=2800){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),dur);}
 
 // ═══════════════════════════════════════════
 // AUTO RESET ENGINE
@@ -1541,27 +1594,55 @@ const GAMBLE_PRESETS=[
   {name:"WARRIOR BET",risk:"Medium",missions:["8h study","No youtube","No FAP","Sandhi Morning"],desc:"A real day."},
   {name:"LEGEND BET",risk:"Extreme",missions:["10h study","No youtube","No FAP","No instagram","No chatting","Sandhi Morning","Sandhi Evening","Wake up before 6"],desc:"Dominate or suffer."},
 ];
-const STREAK_GROUPS=[
+// Default streak groups (used on first load)
+const STREAK_GROUPS_DEFAULT=[
   {group:"📚 Study",color:"var(--res)",missions:["1h study","2h study","3h study","4h study","5h study","6h study","7h study","8h study","9h study","10h study","11h study","12h study"]},
   {group:"🚫 No Bad Habits",color:"var(--red)",missions:["No FAP","No youtube","No instagram","No chatting","No Minecraft"]},
   {group:"🌅 Routine",color:"var(--cyan)",missions:["Wake up before 6","Yest. Sleep before 11:30","7h sleep previous night","Sandhi Morning","Sandhi Evening"]},
   {group:"💪 Health",color:"var(--civ)",missions:["All meals on time","3L water","Exercise 30 min","Evening 10min walk","Meditation 2x 10min"]},
   {group:"🏠 Discipline",color:"var(--blue)",missions:["Tidy up the house","30min Terrace Morning"]},
 ];
-// Flat list derived from groups for autoUpdateStreaks
-const STREAK_MISSIONS=STREAK_GROUPS.flatMap(g=>g.missions);
+const STREAK_FEATURED_DEFAULT=['4h study','6h study','8h study','10h study','Sandhi Morning','Sandhi Evening','No FAP','No Minecraft','7h sleep previous night','Wake up before 6','3L water','All meals on time'];
 
-const BADGES=[
-  {id:"bronze",name:"Bronze",emoji:"🥉",cost:800,color:"#b5651d",bonus:0.10},
-  {id:"silver",name:"Silver",emoji:"🥈",cost:2500,color:"#9aa0a6",bonus:0.20},
-  {id:"gold",name:"Gold",emoji:"🥇",cost:6000,color:"#c9a84c",bonus:0.30},
-  {id:"platinum",name:"Platinum",emoji:"🪨",cost:14000,color:"#c8e0f0",bonus:0.45},
-  {id:"emerald",name:"Emerald",emoji:"💚",cost:32000,color:"#2e8b57",bonus:0.60},
-  {id:"diamond",name:"Diamond",emoji:"💎",cost:72000,color:"#4a90c4",bonus:0.75},
-  {id:"alpha",name:"Alpha",emoji:"🗡️",cost:160000,color:"#8B5A2B",bonus:0.90},
-  {id:"omega",name:"Omega",emoji:"🐉",cost:350000,color:"#cc2200",bonus:1.00},
-];
+// STREAK_GROUPS and STREAK_FEATURED are initialized inside _bootApp (after Supabase loads user data).
+// External code (streak editor) accesses them via window.STREAK_GROUPS / window.STREAK_FEATURED.
+let STREAK_GROUPS=STREAK_GROUPS_DEFAULT.map(g=>({...g,missions:[...g.missions]})); // safe placeholder
+let STREAK_FEATURED=[...STREAK_FEATURED_DEFAULT]; // safe placeholder
 
+// Auto-absorb: any mission in DAILY_LIST not in any group → add to "Other"
+function _syncStreakGroups(){
+  const allMissions=Object.keys(DAILY_LIST);
+  const assigned=new Set(STREAK_GROUPS.flatMap(g=>g.missions));
+  const unassigned=allMissions.filter(m=>!assigned.has(m));
+  if(unassigned.length){
+    let other=STREAK_GROUPS.find(g=>g.group==='📦 Other');
+    if(!other){other={group:'📦 Other',color:'var(--purple)',missions:[]};STREAK_GROUPS.push(other);}
+    unassigned.forEach(m=>{if(!other.missions.includes(m))other.missions.push(m);});
+    S.set('streak_groups',STREAK_GROUPS);
+  }
+  // Also prune missions from groups if removed from DAILY_LIST
+  let pruned=false;
+  STREAK_GROUPS.forEach(g=>{
+    const before=g.missions.length;
+    g.missions=g.missions.filter(m=>DAILY_LIST[m]!==undefined);
+    if(g.missions.length!==before)pruned=true;
+  });
+  // Remove empty groups (but keep user-added empty groups they may be mid-edit)
+  const before=STREAK_GROUPS.length;
+  STREAK_GROUPS=STREAK_GROUPS.filter(g=>g.missions.length>0||g._userAdded);
+  if(pruned||STREAK_GROUPS.length!==before)S.set('streak_groups',STREAK_GROUPS);
+  // Prune featured too
+  STREAK_FEATURED=STREAK_FEATURED.filter(m=>DAILY_LIST[m]!==undefined);
+  // Keep window refs in sync for streak editor (which lives outside _bootApp)
+  window.STREAK_GROUPS=STREAK_GROUPS;
+  window.STREAK_FEATURED=STREAK_FEATURED;
+}
+
+// Flat list for autoUpdateStreaks — all missions across all groups
+function _getStreakMissions(){return STREAK_GROUPS.flatMap(g=>g.missions);}
+const STREAK_MISSIONS=new Proxy([],{get(_,p){return _getStreakMissions()[p];}});// keep compat
+
+// BADGES defined earlier (before auto-reset IIFE) — see above
 
 const QS_MISSIONS_DEFAULT=[
   {id:"yt_close",emoji:"📵",label:"Close YouTube/songs",cash:5,cat:"📵 Distractions"},
@@ -2329,6 +2410,7 @@ function saveMissionEdits(){
   // Update the live DAILY_LIST in-place so rest of app sees it
   Object.keys(DAILY_LIST).forEach(k=>delete DAILY_LIST[k]);
   Object.assign(DAILY_LIST,newList);
+  _syncStreakGroups(); // auto-absorb any new missions
   closeModal();renderMissions();
   toast('✅ Missions saved!');
 }
@@ -2443,13 +2525,135 @@ function saveAchievementEdits(){
     Object.keys(ACH_LIST).forEach(k=>delete ACH_LIST[k]);
     Object.assign(ACH_LIST,ca);
   }
+  _syncStreakGroups(); // auto-absorb new/removed missions into streak groups
 })();
 
 // ═══════════════════════════════════════════
 // STREAKS
 // ═══════════════════════════════════════════
-const STREAK_FEATURED=['4h study','6h study','8h study','10h study','Sandhi Morning','Sandhi Evening','No FAP','No Minecraft','7h sleep previous night','Wake up before 6','3L water','All meals on time'];
 let streaksShowAll=false;
+
+// ── Streak Editor ──────────────────────────
+// NOTE: these functions live outside _bootApp and must always access streak
+// data via window.STREAK_GROUPS / window.STREAK_FEATURED (populated inside
+// _bootApp after Supabase loads). Never read the module-level placeholders directly.
+
+function openStreakEditor(){
+  _syncStreakGroups();
+  switchSeTab('featured');
+  document.getElementById('streak-editor-overlay').style.display='block';
+}
+function closeStreakEditor(){
+  document.getElementById('streak-editor-overlay').style.display='none';
+  if(typeof window.renderStreaks==='function')window.renderStreaks();
+}
+function switchSeTab(tab){
+  ['featured','groups'].forEach(t=>{
+    document.getElementById('setab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('sesub-'+t).style.display=t===tab?'':'none';
+  });
+  if(tab==='featured')_renderSeFeatured();
+  if(tab==='groups')_renderSeGroups();
+}
+function _renderSeFeatured(){
+  const el=document.getElementById('se-featured-list');
+  const SG=window.STREAK_GROUPS||[];
+  const SF=window.STREAK_FEATURED||[];
+  const allM=Object.keys(DAILY_LIST);
+  el.innerHTML=allM.map(m=>{
+    const grp=SG.find(g=>g.missions.includes(m));
+    const col=grp?grp.color:'var(--purple)';
+    const checked=SF.includes(m);
+    return `<label style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer;">
+      <input type="checkbox" id="sef_${m.replace(/\W/g,'_')}" ${checked?'checked':''} style="accent-color:var(--purple);width:16px;height:16px;">
+      <span style="font-size:15px;color:var(--white);flex:1;">${m}</span>
+      <span style="font-size:12px;color:${col};">${grp?grp.group:'📦 Other'}</span>
+    </label>`;
+  }).join('');
+}
+function saveStreakFeatured(){
+  window.STREAK_FEATURED=Object.keys(DAILY_LIST).filter(m=>document.getElementById('sef_'+m.replace(/\W/g,'_'))?.checked);
+  STREAK_FEATURED=window.STREAK_FEATURED;
+  S.set('streak_featured',STREAK_FEATURED);
+  if(typeof window.toast==='function')window.toast('⭐ Featured streaks saved!');
+  closeStreakEditor();
+}
+function _renderSeGroups(){
+  const el=document.getElementById('se-groups-list');
+  const SG=window.STREAK_GROUPS||[];
+  el.innerHTML=SG.map((g,gi)=>{
+    const missionRows=g.missions.map(m=>`
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);">
+        <span style="flex:1;font-size:14px;color:var(--white);">${m}</span>
+        <select data-mission="${encodeURIComponent(m)}" data-from="${gi}" onchange="seMoveMission(this)" style="padding:4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;">
+          ${SG.map((og,oi)=>`<option value="${oi}" ${oi===gi?'selected':''}>${og.group}</option>`).join('')}
+        </select>
+      </div>`).join('');
+    return `<div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <input id="seg_label_${gi}" value="${g.group.replace(/"/g,'&quot;')}" style="flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;" onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'">
+        <input type="color" id="seg_color_${gi}" value="${g.color.startsWith('var')?'#888aaa':g.color}" style="width:36px;height:34px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+        <button onclick="seDeleteGroup(${gi})" title="Delete group" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:5px;width:30px;height:30px;cursor:pointer;font-size:14px;flex-shrink:0;">🗑</button>
+      </div>
+      <div>${missionRows||'<div style="font-size:13px;color:var(--gray);padding:4px 0;">No missions</div>'}</div>
+    </div>`;
+  }).join('');
+}
+function seMoveMission(sel){
+  const SG=window.STREAK_GROUPS;
+  if(!SG)return;
+  const mission=decodeURIComponent(sel.dataset.mission);
+  const fromIdx=parseInt(sel.dataset.from);
+  const toIdx=parseInt(sel.value);
+  if(fromIdx===toIdx||isNaN(fromIdx)||isNaN(toIdx))return;
+  if(!SG[fromIdx]||!SG[toIdx])return;
+  SG[fromIdx].missions=SG[fromIdx].missions.filter(m=>m!==mission);
+  if(!SG[toIdx].missions.includes(mission))SG[toIdx].missions.push(mission);
+  _renderSeGroups();
+}
+function seDeleteGroup(gi){
+  const SG=window.STREAK_GROUPS;
+  if(!SG||!SG[gi])return;
+  if(SG.length<=1){if(typeof window.toast==='function')window.toast('⚠️ Cannot delete the only group!');return;}
+  // Move missions to 📦 Other, or to first remaining group
+  const orphans=SG[gi].missions;
+  let target=SG.find((o,i)=>i!==gi&&o.group==='📦 Other');
+  if(!target)target=SG.find((o,i)=>i!==gi);
+  if(orphans.length&&target){
+    orphans.forEach(m=>{if(!target.missions.includes(m))target.missions.push(m);});
+  }
+  SG.splice(gi,1);
+  _renderSeGroups();
+}
+function addStreakGroup(){
+  const SG=window.STREAK_GROUPS;
+  if(!SG)return;
+  SG.push({group:'New Group',color:'#6c5ce7',missions:[]});
+  _renderSeGroups();
+}
+function saveStreakGroups(){
+  const SG=window.STREAK_GROUPS;
+  if(!SG)return;
+  SG.forEach((g,i)=>{
+    const lbl=document.getElementById('seg_label_'+i);
+    const col=document.getElementById('seg_color_'+i);
+    if(lbl)g.group=lbl.value.trim()||g.group;
+    if(col)g.color=col.value;
+  });
+  // Keep module-level var and window ref in sync
+  STREAK_GROUPS=SG;
+  S.set('streak_groups',STREAK_GROUPS);
+  if(typeof window.toast==='function')window.toast('📁 Streak groups saved!');
+  closeStreakEditor();
+}
+window.openStreakEditor=openStreakEditor;
+window.closeStreakEditor=closeStreakEditor;
+window.switchSeTab=switchSeTab;
+window.saveStreakFeatured=saveStreakFeatured;
+window.saveStreakGroups=saveStreakGroups;
+window.seMoveMission=seMoveMission;
+window.seDeleteGroup=seDeleteGroup;
+window.addStreakGroup=addStreakGroup;
 
 function renderStreaks(){
   const container=document.getElementById('streak-groups');container.innerHTML='';
@@ -2987,10 +3191,15 @@ function _processInterest(){
   const currentWkDate=new Date(currentWk.replace('week_',''));
   if(!wkDate){meta.lastProcessedWeek=currentWk;meta.belowThreshold=false;_setInterestMeta(meta);return;}
   const today=todayStr();
+  // Helper: local date → week_YYYY-MM-DD string (same format as weekKey())
+  const _localWkStr=(d)=>{
+    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+    return`week_${y}-${m}-${day}`;
+  };
   let credited=0;
   while(wkDate<currentWkDate){
     wkDate.setDate(wkDate.getDate()+7);
-    const wkStr='week_'+wkDate.toISOString().slice(0,10);
+    const wkStr=_localWkStr(wkDate);
     if(wkStr>currentWk)break;
     const balance=getBankBalance()+credited;
     if(!meta.belowThreshold&&balance>=100){
@@ -3384,7 +3593,8 @@ function _renderPawnShop(){
       const days=_daysSince(p.pawnDate,today);
       const displayDay=days+1;
       const daysLeft=7-days;
-      const fee=Math.round(p.pawnedValue*0.03*days);
+      const billableDays=Math.max(1,days);
+      const fee=Math.round(p.pawnedValue*0.03*billableDays);
       const total=p.pawnedValue+fee;
       const urgency=daysLeft<=1?'var(--red)':daysLeft<=3?'var(--orange)':'var(--cyan)';
       return `<div style="background:rgba(255,166,0,.08);border:1px solid rgba(255,166,0,.3);border-radius:8px;padding:12px;margin-bottom:8px;">
@@ -3835,8 +4045,7 @@ function showModal(title,body,btns){
 }
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
 function closeModalOut(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
-let toastTimer;
-function toast(msg,dur=2800){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),dur);}
+// toastTimer and toast() are defined earlier (before auto-reset IIFE) — see above
 
 // ═══════════════════════════════════════════
 // CHARTS
@@ -5078,6 +5287,9 @@ function colRevealNext() {
   window.claimAchievement=claimAchievement;
   window.renderStreaks=renderStreaks;
   window.autoUpdateStreaks=autoUpdateStreaks;
+  // Keep window refs to streak data in sync after _bootApp completes
+  window.STREAK_GROUPS=STREAK_GROUPS;
+  window.STREAK_FEATURED=STREAK_FEATURED;
   window.renderShop=renderShop;
   window.badgeAction=badgeAction;
   window.renderQuickStart=renderQuickStart;
