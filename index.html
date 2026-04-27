@@ -15,16 +15,16 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--white);font-family:'Rajdhani',sans-serif;font-size:16px;min-height:100vh;overflow-x:hidden;}
 body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:9999;}
-#nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(8,8,16,.97);border-bottom:1px solid var(--purple);display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:52px;backdrop-filter:blur(12px);}
+#nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--nav-bg,rgba(8,8,16,.97));border-bottom:1px solid var(--purple);display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:52px;backdrop-filter:blur(12px);}
 #nav-title{font-family:'Bebas Neue',cursive;font-size:20px;color:var(--purple);letter-spacing:3px;cursor:pointer;}
 #nav-title span{font-size:12px;color:var(--gray);letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600;margin-left:6px;vertical-align:middle;}
 #nav-current{font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--gray);font-weight:600;flex:1;text-align:center;letter-spacing:.5px;}
 #nav-hamburger{background:transparent;border:1px solid var(--border);color:var(--white);width:38px;height:38px;border-radius:6px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:.2s;flex-shrink:0;}
-#nav-hamburger:hover{border-color:var(--purple);background:rgba(108,92,231,.15);}
-#nav-dropdown{display:none;position:fixed;top:52px;right:0;width:220px;max-height:calc(100vh - 60px);overflow-y:auto;background:rgba(8,8,16,.98);border:1px solid var(--purple);border-top:none;border-radius:0 0 0 12px;z-index:200;backdrop-filter:blur(12px);padding:6px;}
+#nav-hamburger:hover{border-color:var(--purple);background:color-mix(in srgb,var(--purple) 15%,transparent);}
+#nav-dropdown{display:none;position:fixed;top:52px;right:0;width:220px;max-height:calc(100vh - 60px);overflow-y:auto;background:var(--nav-bg,rgba(8,8,16,.98));border:1px solid var(--purple);border-top:none;border-radius:0 0 0 12px;z-index:200;backdrop-filter:blur(12px);padding:6px;}
 #nav-dropdown.open{display:block;}
 .nav-btn{display:block;width:100%;background:transparent;border:none;border-radius:6px;color:var(--gray);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;padding:10px 14px;cursor:pointer;text-align:left;transition:.15s;letter-spacing:.3px;}
-.nav-btn:hover{background:rgba(108,92,231,.15);color:var(--white);}
+.nav-btn:hover{background:color-mix(in srgb,var(--purple) 15%,transparent);color:var(--white);}
 .nav-btn.active{background:var(--purple);color:white;}
 .nav-divider{height:1px;background:var(--border);margin:4px 0;}
 #main{margin-top:52px;padding:14px;max-width:920px;margin-left:auto;margin-right:auto;}
@@ -822,6 +822,7 @@ select{-webkit-appearance:none;appearance:none;}
     <div class="tab active" id="shoptab-badges" onclick="switchShopTab('badges')">🏅 BADGES</div>
     <div class="tab" id="shoptab-passes" onclick="switchShopTab('passes')">🎟️ PASSES</div>
     <div class="tab" id="shoptab-bank" onclick="switchShopTab('bank')">🏦 BANK</div>
+    <div class="tab" id="shoptab-themes" onclick="switchShopTab('themes')">🎨 THEMES</div>
   </div>
 
   <!-- BADGES TAB -->
@@ -838,6 +839,72 @@ select{-webkit-appearance:none;appearance:none;}
       </div>
     </div>
     <div id="pass-list-container"></div>
+  </div>
+
+  <!-- THEMES TAB -->
+  <div id="shopsub-themes" style="display:none;">
+    <!-- Colour Pickers + Preview -->
+    <div class="card" style="border-color:rgba(124,92,191,.4);">
+      <div class="card-title" style="margin-bottom:14px;">🎨 CUSTOM THEME</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <label style="display:flex;flex-direction:column;gap:5px;">
+          <span style="font-size:12px;color:var(--gray);letter-spacing:.5px;">PRIMARY COLOR</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color" id="thm-pick-primary" value="#6c5ce7" style="width:44px;height:34px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+            <span id="thm-label-primary" style="font-size:12px;color:var(--gray);">#6c5ce7</span>
+          </div>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:5px;">
+          <span style="font-size:12px;color:var(--gray);letter-spacing:.5px;">ACCENT COLOR</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color" id="thm-pick-accent" value="#00d2a0" style="width:44px;height:34px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+            <span id="thm-label-accent" style="font-size:12px;color:var(--gray);">#00d2a0</span>
+          </div>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:5px;">
+          <span style="font-size:12px;color:var(--gray);letter-spacing:.5px;">BACKGROUND</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color" id="thm-pick-bg" value="#080810" style="width:44px;height:34px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+            <span id="thm-label-bg" style="font-size:12px;color:var(--gray);">#080810</span>
+          </div>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:5px;">
+          <span style="font-size:12px;color:var(--gray);letter-spacing:.5px;">TEXT COLOR</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color" id="thm-pick-text" value="#e8e8ff" style="width:44px;height:34px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+            <span id="thm-label-text" style="font-size:12px;color:var(--gray);">#e8e8ff</span>
+          </div>
+        </label>
+      </div>
+      <!-- Live preview -->
+      <div id="thm-preview-strip" style="border-radius:8px;padding:12px;margin-bottom:14px;border:1px solid var(--border);background:var(--bg4);">
+        <div style="font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:2px;margin-bottom:6px;" id="thm-prev-title">PREVIEW</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <div id="thm-prev-btn1" style="padding:5px 10px;border-radius:5px;font-size:12px;font-weight:700;">PRIMARY</div>
+          <div id="thm-prev-btn2" style="padding:5px 10px;border-radius:5px;font-size:12px;font-weight:700;">ACCENT</div>
+        </div>
+        <div id="thm-prev-track" style="height:5px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.15);"><div id="thm-prev-bar" style="height:100%;width:65%;border-radius:4px;"></div></div>
+        <div id="thm-prev-text" style="font-size:12px;margin-top:6px;opacity:.85;">Sample text · 1234 XP · 500 💰</div>
+      </div>
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button class="btn" style="flex:1;color:var(--gray);" onclick="thmReset()">↩ RESET TO DEFAULT</button>
+      </div>
+      <button id="thm-buy-btn" class="btn btn-yellow" style="width:100%;" onclick="thmBuy()">💰 BUY THEME — 500</button>
+      <div id="thm-buy-status" style="font-size:13px;color:var(--gray);margin-top:6px;text-align:center;"></div>
+    </div>
+
+    <!-- Presets -->
+    <div class="card">
+      <div style="font-family:'Bebas Neue',cursive;font-size:15px;letter-spacing:1.5px;color:var(--gray);margin-bottom:10px;">⚡ PRESETS <span style="font-size:12px;color:var(--border);">(tap to load into pickers)</span></div>
+      <div id="thm-preset-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;"></div>
+    </div>
+
+    <!-- Owned Themes -->
+    <div class="card" id="thm-owned-card">
+      <div style="font-family:'Bebas Neue',cursive;font-size:15px;letter-spacing:1.5px;color:var(--cyan);margin-bottom:10px;">🎨 OWNED THEMES</div>
+      <div id="thm-owned-list"></div>
+    </div>
   </div>
 
   <!-- BANK TAB -->
@@ -1294,6 +1361,7 @@ window.handleChestAudioUpload = async function(input) {
     
     // Save it to Supabase so it stays with the user account
     await _dbSet('custom_chest_sound', base64Audio);
+    window._userData['custom_chest_sound'] = base64Audio; // keep in-memory cache in sync
     toast("Sound saved to account!");
   };
   reader.readAsDataURL(file);
@@ -1411,12 +1479,6 @@ let weekly_data=S.get('weekly',{});
 let badge_data=S.get('badges',{owned:[],equipped:null});
 let pass_data=S.get('pass_data',{passes:[],inventory:{},claimedDates:{}});
 
-// Re-initialise streak groups/featured now that Supabase data is loaded into S
-STREAK_GROUPS=S.get('streak_groups',null)||STREAK_GROUPS_DEFAULT.map(g=>({...g,missions:[...g.missions]}));
-STREAK_FEATURED=S.get('streak_featured',null)||[...STREAK_FEATURED_DEFAULT];
-// Keep window refs in sync so streak editor (outside _bootApp) always sees the live arrays
-window.STREAK_GROUPS=STREAK_GROUPS;
-window.STREAK_FEATURED=STREAK_FEATURED;
 
 
 // ── BADGES must be defined before the auto-reset IIFE (applyBonus → getEquippedBadge uses it on gamble win) ──
@@ -1604,13 +1666,17 @@ const STREAK_GROUPS_DEFAULT=[
 ];
 const STREAK_FEATURED_DEFAULT=['4h study','6h study','8h study','10h study','Sandhi Morning','Sandhi Evening','No FAP','No Minecraft','7h sleep previous night','Wake up before 6','3L water','All meals on time'];
 
-// STREAK_GROUPS and STREAK_FEATURED are initialized inside _bootApp (after Supabase loads user data).
-// External code (streak editor) accesses them via window.STREAK_GROUPS / window.STREAK_FEATURED.
-let STREAK_GROUPS=STREAK_GROUPS_DEFAULT.map(g=>({...g,missions:[...g.missions]})); // safe placeholder
-let STREAK_FEATURED=[...STREAK_FEATURED_DEFAULT]; // safe placeholder
+// Load from Supabase (now populated). Use let so _syncStreakGroups can reassign.
+let STREAK_GROUPS=S.get('streak_groups',null)||STREAK_GROUPS_DEFAULT.map(g=>({...g,missions:[...g.missions]}));
+let STREAK_FEATURED=S.get('streak_featured',null)||[...STREAK_FEATURED_DEFAULT];
+
+// Keep window refs for editor (lives outside _bootApp scope)
+window.STREAK_GROUPS=STREAK_GROUPS;
+window.STREAK_FEATURED=STREAK_FEATURED;
 
 // Auto-absorb: any mission in DAILY_LIST not in any group → add to "Other"
 function _syncStreakGroups(){
+  if(!STREAK_GROUPS||!STREAK_FEATURED)return;
   const allMissions=Object.keys(DAILY_LIST);
   const assigned=new Set(STREAK_GROUPS.flatMap(g=>g.missions));
   const unassigned=allMissions.filter(m=>!assigned.has(m));
@@ -1620,26 +1686,24 @@ function _syncStreakGroups(){
     unassigned.forEach(m=>{if(!other.missions.includes(m))other.missions.push(m);});
     S.set('streak_groups',STREAK_GROUPS);
   }
-  // Also prune missions from groups if removed from DAILY_LIST
   let pruned=false;
   STREAK_GROUPS.forEach(g=>{
     const before=g.missions.length;
-    g.missions=g.missions.filter(m=>DAILY_LIST[m]!==undefined);
+    g.missions=g.missions.filter(m=>allMissions.includes(m));
     if(g.missions.length!==before)pruned=true;
   });
-  // Remove empty groups (but keep user-added empty groups they may be mid-edit)
   const before=STREAK_GROUPS.length;
   STREAK_GROUPS=STREAK_GROUPS.filter(g=>g.missions.length>0||g._userAdded);
   if(pruned||STREAK_GROUPS.length!==before)S.set('streak_groups',STREAK_GROUPS);
-  // Prune featured too
-  STREAK_FEATURED=STREAK_FEATURED.filter(m=>DAILY_LIST[m]!==undefined);
-  // Keep window refs in sync for streak editor (which lives outside _bootApp)
+  const featuredBefore=STREAK_FEATURED.length;
+  STREAK_FEATURED=STREAK_FEATURED.filter(m=>allMissions.includes(m));
+  if(STREAK_FEATURED.length!==featuredBefore)S.set('streak_featured',STREAK_FEATURED);
   window.STREAK_GROUPS=STREAK_GROUPS;
   window.STREAK_FEATURED=STREAK_FEATURED;
 }
 
 // Flat list for autoUpdateStreaks — all missions across all groups
-function _getStreakMissions(){return STREAK_GROUPS.flatMap(g=>g.missions);}
+function _getStreakMissions(){return STREAK_GROUPS?STREAK_GROUPS.flatMap(g=>g.missions):[];}
 const STREAK_MISSIONS=new Proxy([],{get(_,p){return _getStreakMissions()[p];}});// keep compat
 
 // BADGES defined earlier (before auto-reset IIFE) — see above
@@ -1802,6 +1866,11 @@ function renderWeeklyChart() {
 const SCREENS=['home','missions','log','gamble','achievements','boss','quickstart','streaks','charts','weekly','shop','collection','lock','settings'];
 const NAV_LABELS={home:'🏠 Home',missions:'✅ Missions',log:'📝 Log',gamble:'🎰 Gamble',achievements:'🏆 Achievements',boss:'⚔️ Boss',quickstart:'⚡ Quick Start',streaks:'🔥 Streaks',charts:'📈 Charts',weekly:'📊 Weekly',shop:'🛒 Shop',collection:'🃏 Collection',lock:'🔒 Lock',settings:'⚙️ Settings'};
 function goto(screen){
+  // If navigating AWAY from shop while a preview is active, revert to saved theme
+  if(screen!=='shop'&&window._thmPreviewActive){
+    window._thmPreviewActive=false;
+    if(typeof thmBootLoad==='function')thmBootLoad();
+  }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+screen).classList.add('active');
@@ -2052,7 +2121,7 @@ function resolveBet(){
     gamble_data.history.push({name:bet.name,missions:bet.missions,amount:bet.amount,payout:0,date:bet.date,won:false,allOrNothing:!!bet.allOrNothing,cashWiped:cashLost});
     gamble_data.active_bet=null;S.set('gamble',gamble_data);S.set('state',state);updateUI();renderGamble();
     if(bet.allOrNothing){
-      showModal('☠️ ALL OR NOTHING — LOST',`You failed. Your entire cash has been wiped to 0.<br><br><span style="color:var(--red);font-size:18px;font-weight:700">-${cashLost+bet.amount} 💰 TOTAL GONE</span><br><br>Punishments apply tomorrow.<br><br>🛏️ No bed | 🚿 Cold shower | 📵 No entertainment | 😴 Floor | ⏰ 5:30AM | 🪑 No comfort`,[{txt:'I DESERVE THIS',cls:'btn-red',fn:closeModal}]);
+      showModal('☠️ ALL OR NOTHING — LOST',`You failed. Your entire cash has been wiped to 0.<br><br><span style="color:var(--red);font-size:18px;font-weight:700">-${cashLost} 💰 WIPED</span><br><br>Punishments apply tomorrow.<br><br>🛏️ No bed | 🚿 Cold shower | 📵 No entertainment | 😴 Floor | ⏰ 5:30AM | 🪑 No comfort`,[{txt:'I DESERVE THIS',cls:'btn-red',fn:closeModal}]);
     } else {
       showModal('💀 YOU LOST','Punishments apply tomorrow.<br><br>🛏️ No bed | 🚿 Cold shower | 📵 No entertainment | 😴 Floor | ⏰ 5:30AM | 🪑 No comfort',[{txt:'I ACCEPT MY FATE',cls:'btn-red',fn:closeModal}]);
     }
@@ -2640,9 +2709,8 @@ function saveStreakGroups(){
     if(lbl)g.group=lbl.value.trim()||g.group;
     if(col)g.color=col.value;
   });
-  // Keep module-level var and window ref in sync
-  STREAK_GROUPS=SG;
-  S.set('streak_groups',STREAK_GROUPS);
+  window.STREAK_GROUPS=SG;
+  S.set('streak_groups',SG);
   if(typeof window.toast==='function')window.toast('📁 Streak groups saved!');
   closeStreakEditor();
 }
@@ -2657,6 +2725,9 @@ window.addStreakGroup=addStreakGroup;
 
 function renderStreaks(){
   const container=document.getElementById('streak-groups');container.innerHTML='';
+  // Always use window refs so editor saves (outside _bootApp closure) are reflected
+  const SG=window.STREAK_GROUPS||STREAK_GROUPS||[];
+  const SF=window.STREAK_FEATURED||STREAK_FEATURED||[];
   // Toggle button
   const toggleWrap=document.createElement('div');
   toggleWrap.style.cssText='display:flex;justify-content:flex-end;margin-bottom:10px;';
@@ -2669,52 +2740,60 @@ function renderStreaks(){
   container.appendChild(toggleWrap);
 
   if(!streaksShowAll){
-    // Featured view — flat grid of the chosen missions
     const card=document.createElement('div');card.className='card';
     card.innerHTML=`<div style="font-size:14px;font-weight:700;margin-bottom:10px;border-left:3px solid var(--orange);padding-left:8px;color:var(--orange)">⭐ Featured Streaks</div><div class="streak-grid" id="sg-featured"></div>`;
     container.appendChild(card);
     const grid=document.getElementById('sg-featured');
-    STREAK_FEATURED.forEach(m=>{
-      const sd=streaks[m]||{count:0,best:0,last:null};
-      const isActive=sd.last===todayStr();
-      // find group color
-      const grp=STREAK_GROUPS.find(g=>g.missions.includes(m));
-      const col=grp?grp.color:'var(--purple)';
-      const div=document.createElement('div');div.className='streak-card';
-      div.style.borderColor=isActive?col:'var(--border)';
-      div.style.background=isActive?col+'11':'';
-      div.innerHTML=`<div style="font-size:20px">${isActive?'🔥':'💤'}</div>
-        <div class="streak-num" style="color:${isActive?col:'var(--gray)'}">${sd.count}</div>
-        <div style="font-size:15px;color:var(--gray);margin-bottom:2px">Best: ${sd.best}</div>
-        <div style="font-size:15px;color:var(--white);line-height:1.3;font-weight:600">${m}</div>`;
-      grid.appendChild(div);
-    });
-  } else {
-    // Full view — all groups
-    STREAK_GROUPS.forEach(g=>{
-      const section=document.createElement('div');section.className='card';
-      section.innerHTML=`<div style="font-size:14px;font-weight:700;margin-bottom:10px;border-left:3px solid ${g.color};padding-left:8px;color:${g.color}">${g.group}</div>
-        <div class="streak-grid" id="sg-${g.group.replace(/\W/g,'_')}"></div>`;
-      container.appendChild(section);
-      const grid=document.getElementById('sg-'+g.group.replace(/\W/g,'_'));
-      g.missions.forEach(m=>{
+    if(!SF.length){
+      grid.innerHTML='<div style="font-size:14px;color:var(--gray);padding:8px 0;">No featured streaks. Tap ✏️ Edit Streaks to pick some.</div>';
+    } else {
+      SF.forEach(m=>{
         const sd=streaks[m]||{count:0,best:0,last:null};
         const isActive=sd.last===todayStr();
-        const card=document.createElement('div');card.className='streak-card';
-        card.style.borderColor=isActive?g.color:'var(--border)';
-        card.style.background=isActive?g.color+'11':'';
-        card.innerHTML=`<div style="font-size:20px">${isActive?'🔥':'💤'}</div>
-          <div class="streak-num" style="color:${isActive?g.color:'var(--gray)'}">${sd.count}</div>
+        const grp=SG.find(g=>g.missions.includes(m));
+        const col=grp?grp.color:'var(--purple)';
+        const div=document.createElement('div');div.className='streak-card';
+        div.style.borderColor=isActive?col:'var(--border)';
+        div.style.background=isActive?col+'11':'';
+        div.innerHTML=`<div style="font-size:20px">${isActive?'🔥':'💤'}</div>
+          <div class="streak-num" style="color:${isActive?col:'var(--gray)'}">${sd.count}</div>
           <div style="font-size:15px;color:var(--gray);margin-bottom:2px">Best: ${sd.best}</div>
           <div style="font-size:15px;color:var(--white);line-height:1.3;font-weight:600">${m}</div>`;
-        grid.appendChild(card);
+        grid.appendChild(div);
       });
-    });
+    }
+  } else {
+    if(!SG.length){
+      const empty=document.createElement('div');empty.className='card';
+      empty.innerHTML='<div style="font-size:14px;color:var(--gray);">No streak groups. Tap ✏️ Edit Streaks to set up groups.</div>';
+      container.appendChild(empty);
+    } else {
+      SG.forEach(g=>{
+        const section=document.createElement('div');section.className='card';
+        section.innerHTML=`<div style="font-size:14px;font-weight:700;margin-bottom:10px;border-left:3px solid ${g.color};padding-left:8px;color:${g.color}">${g.group}</div>
+          <div class="streak-grid" id="sg-${g.group.replace(/\W/g,'_')}"></div>`;
+        container.appendChild(section);
+        const grid=document.getElementById('sg-'+g.group.replace(/\W/g,'_'));
+        g.missions.forEach(m=>{
+          const sd=streaks[m]||{count:0,best:0,last:null};
+          const isActive=sd.last===todayStr();
+          const card=document.createElement('div');card.className='streak-card';
+          card.style.borderColor=isActive?g.color:'var(--border)';
+          card.style.background=isActive?g.color+'11':'';
+          card.innerHTML=`<div style="font-size:20px">${isActive?'🔥':'💤'}</div>
+            <div class="streak-num" style="color:${isActive?g.color:'var(--gray)'}">${sd.count}</div>
+            <div style="font-size:15px;color:var(--gray);margin-bottom:2px">Best: ${sd.best}</div>
+            <div style="font-size:15px;color:var(--white);line-height:1.3;font-weight:600">${m}</div>`;
+          grid.appendChild(card);
+        });
+      });
+    }
   }
 }
 function autoUpdateStreaks(completedMissions){
   const today=todayStr();
-  STREAK_MISSIONS.forEach(m=>{
+  const SM=(window.STREAK_GROUPS||STREAK_GROUPS||[]).flatMap(g=>g.missions);
+  SM.forEach(m=>{
     if(!streaks[m])streaks[m]={count:0,best:0,last:null};
     const entry=streaks[m];
     if(completedMissions.includes(m)){
@@ -2731,6 +2810,7 @@ function autoUpdateStreaks(completedMissions){
   });
   S.set('streaks',streaks);
 }
+window.renderStreaks=renderStreaks;
 
 // ═══════════════════════════════════════════
 // CASH SHOP (BADGES)
@@ -2783,12 +2863,13 @@ function badgeAction(bid){
 // SHOP TAB SWITCHER
 // ═══════════════════════════════════════════
 function switchShopTab(tab){
-  ['badges','passes','bank'].forEach(t=>{
+  ['badges','passes','bank','themes'].forEach(t=>{
     document.getElementById('shoptab-'+t).classList.toggle('active',t===tab);
     document.getElementById('shopsub-'+t).style.display=t===tab?'':'none';
   });
   if(tab==='passes')renderPassList();
   if(tab==='bank')renderBank();
+  if(tab==='themes'){thmRenderPresets();thmRenderOwned();thmUpdateBuyBtn();}
 }
 window.switchShopTab=switchShopTab;
 
@@ -4338,7 +4419,8 @@ updateUI();
     });
     const ic=document.getElementById('inv-cash');if(ic)ic.textContent=state.cash.toLocaleString();
     const grid=document.getElementById('inv-grid');grid.innerHTML='';
-    const pawnedIds=window._pawnedCardIds||new Set();
+    const pawnedCards=(_getPawnData()||[]).filter(p=>p.type==='card');
+    const pawnedIds=new Set(pawnedCards.map(p=>p.itemId));
     const owned=COLLECTION_CARS.filter(c=>(cardInv[c.id]||0)>0||pawnedIds.has(c.id));
     const filtered=filter==='all'?owned:owned.filter(c=>c.tier===filter);
     if(!filtered.length){grid.innerHTML=`<div style="color:var(--gray);font-size:14px;padding:16px 0;">No cards${filter!=='all'?' in this tier':' yet — open some packs!'}.</div>`;return;}
@@ -4371,7 +4453,8 @@ updateUI();
   function colSellPrice(car,lv){return Math.floor(lv*COL_CHESTS[0].basePrice*0.80);}
   function colSellCard(id){
     const lv=cardInv[id]||0;if(!lv)return;
-    if(window._pawnedCardIds&&window._pawnedCardIds.has(id)){toast('🔒 Card is pawned! Redeem it from the Pawn Shop first.');return;}
+    const pawnedCard=(_getPawnData()||[]).find(p=>p.type==='card'&&p.itemId===id);
+    if(pawnedCard){toast('🔒 Card is pawned! Redeem it from the Pawn Shop first.');return;}
     const car=COLLECTION_CARS.find(c=>c.id===id);
     const sp=colSellPrice(car,lv);
     cardInv[id]=0;state.cash+=sp;
@@ -5317,6 +5400,12 @@ function colRevealNext() {
   window.resetLogView=resetLogView;
   window.showModal=showModal;
   window.closeModal=closeModal;
+  window._pfUpdatePricePreview=_pfUpdatePricePreview;
+  // Expose core refs for theme code (outside _bootApp scope)
+  window._appState=state;
+  window._appS=S;
+  window._appTodayStr=todayStr;
+  if(typeof thmBootLoad==='function')thmBootLoad(); // apply saved theme now that S is ready
   window.closeModalOut=closeModalOut;
   window.toast=toast;
   window.renderCharts=renderCharts;
@@ -5635,6 +5724,404 @@ function renderLockScreen(){
   const inp=document.getElementById('lck2-until');if(inp)inp.min=now2;
 }
 window.renderLockScreen=renderLockScreen;
+
+// ═══════════════════════════════════════════
+// THEME SHOP
+// ═══════════════════════════════════════════
+const THM_PRICE = 500;
+
+// Default must exactly match :root in the CSS (lines 9-14)
+// bg:#080810 bg2:#0f0f1e bg3:#1a1a2e bg4:#2d2d44 border:#3d3d5c
+// purple:#6c5ce7 cyan:#00d2a0 white:#e8e8ff gray:#888aaa yellow:#ffd93d
+const THM_DEFAULT = {
+  primary:'#6c5ce7', accent:'#00d2a0', bg:'#080810',
+  bg2:'#0f0f1e',     bg3:'#1a1a2e',   bg4:'#2d2d44',
+  border:'#3d3d5c',  white:'#e8e8ff', gray:'#888aaa',
+  yellow:'#ffd93d',  red:'#ff3838',   orange:'#ffa502', blue:'#74b9ff',
+};
+
+const THM_PRESETS = [
+  // id, name, free flag, and the 4 picker values (primary/accent/bg/text)
+  // plus full vars for proper rendering
+  {id:'default', name:'DEFAULT',    free:true,
+    primary:'#6c5ce7', accent:'#00d2a0', bg:'#080810', text:'#e8e8ff',
+    bg2:'#0f0f1e', bg3:'#1a1a2e', bg4:'#2d2d44', border:'#3d3d5c',
+    gray:'#888aaa', yellow:'#ffd93d', red:'#ff3838', orange:'#ffa502', blue:'#74b9ff',
+  },
+  {id:'neon', name:'NEON',
+    primary:'#00fff5', accent:'#ff00aa', bg:'#000508', text:'#e0ffff',
+    bg2:'#02080d', bg3:'#041018', bg4:'#061820', border:'#0f4055',
+    gray:'#5a8a99', yellow:'#ffee00', red:'#ff0055', orange:'#ff8800', blue:'#00aaff',
+  },
+  {id:'retro', name:'RETRO',
+    primary:'#ff8c00', accent:'#ffd700', bg:'#1a0a00', text:'#ffe8c0',
+    bg2:'#220e00', bg3:'#301500', bg4:'#3d1e00', border:'#5a3a10',
+    gray:'#aa8855', yellow:'#ffec6e', red:'#ff4500', orange:'#ff6a00', blue:'#87ceeb',
+  },
+  {id:'sakura', name:'SAKURA',
+    primary:'#ff6eb4', accent:'#ff99cc', bg:'#1a0a12', text:'#ffe0ee',
+    bg2:'#220d18', bg3:'#2d1022', bg4:'#3a142c', border:'#5c2040',
+    gray:'#aa6688', yellow:'#ffd6e7', red:'#ff3366', orange:'#ff7799', blue:'#cc88ff',
+  },
+  {id:'ocean', name:'OCEAN',
+    primary:'#00aaff', accent:'#00eaff', bg:'#020d1a', text:'#d0f0ff',
+    bg2:'#041220', bg3:'#06192e', bg4:'#08203c', border:'#0a3050',
+    gray:'#4a7a99', yellow:'#ffe066', red:'#ff4060', orange:'#ff8840', blue:'#55ccff',
+  },
+  {id:'forest', name:'FOREST',
+    primary:'#2ecc71', accent:'#a8ff78', bg:'#041a04', text:'#d0ffd0',
+    bg2:'#061e06', bg3:'#092609', bg4:'#0d300d', border:'#1a5c1a',
+    gray:'#4a8855', yellow:'#d4ff40', red:'#ff4444', orange:'#ff8844', blue:'#44ccaa',
+  },
+  {id:'gold', name:'GOLD',
+    primary:'#ffd700', accent:'#ffaa00', bg:'#1a1400', text:'#fff8cc',
+    bg2:'#201900', bg3:'#2a2000', bg4:'#342800', border:'#5a4800',
+    gray:'#aa9944', yellow:'#ffe566', red:'#ff5500', orange:'#ff8800', blue:'#aaccff',
+  },
+  // WHITE MODE — light background, dark text, everything inverted properly
+  {id:'white', name:'WHITE MODE',
+    primary:'#5b4fcf', accent:'#00a87a', bg:'#f0f0f8', text:'#111122',
+    bg2:'#e8e8f2', bg3:'#dddde8', bg4:'#d0d0de', border:'#bbbbcc',
+    gray:'#666688', yellow:'#b08800', red:'#cc2222', orange:'#cc5500', blue:'#2266cc',
+  },
+  // DARK MODE — pure black, high contrast
+  {id:'dark', name:'DARK MODE',
+    primary:'#9988ff', accent:'#44ddcc', bg:'#000000', text:'#f0f0ff',
+    bg2:'#080808', bg3:'#101010', bg4:'#181818', border:'#2a2a2a',
+    gray:'#777799', yellow:'#ffdd44', red:'#ff4444', orange:'#ff8844', blue:'#66aaff',
+  },
+];
+
+// Storage helpers — only touch these 3 keys
+function _thmGetOwned(){return window._appS.get('owned_themes',[])||[];}
+function _thmSetOwned(arr){window._appS.set('owned_themes',arr);}
+function _thmGetActive(){return window._appS.get('active_theme',null);}
+function _thmSetActive(t){window._appS.set('active_theme',t);}
+
+// Apply ALL CSS variables from a full theme object
+function _thmApplyFull(t){
+  const r=document.documentElement;
+  r.style.setProperty('--bg',     t.bg);
+  r.style.setProperty('--bg2',    t.bg2);
+  r.style.setProperty('--bg3',    t.bg3);
+  r.style.setProperty('--bg4',    t.bg4);
+  r.style.setProperty('--nav-bg', t.bg2||t.bg);
+  r.style.setProperty('--border', t.border);
+  r.style.setProperty('--white',  t.text);
+  r.style.setProperty('--purple', t.primary);
+  r.style.setProperty('--cyan',   t.accent);
+  r.style.setProperty('--gray',   t.gray);
+  r.style.setProperty('--yellow', t.yellow);
+  r.style.setProperty('--red',    t.red);
+  r.style.setProperty('--orange', t.orange);
+  r.style.setProperty('--blue',   t.blue);
+}
+
+// For custom (picker-based) themes without full var set — derive from 4 pickers
+function _thmApplyFromPickers(primary,accent,bg,text){
+  // Determine if light or dark background
+  const isLight=_thmPerceivedBrightness(bg)>128;
+  const r=document.documentElement;
+  const s=(hex,a)=>_thmShade(hex,a,isLight);
+  r.style.setProperty('--bg',     bg);
+  r.style.setProperty('--bg2',    s(bg, isLight?.08:.12));
+  r.style.setProperty('--bg3',    s(bg, isLight?.16:.25));
+  r.style.setProperty('--bg4',    s(bg, isLight?.24:.38));
+  // Border: blend bg toward primary (35%) so it picks up the theme hue,
+  // then lighten (dark themes) or darken (light themes) so it's always visible against bg3/bg4.
+  const borderTinted=_thmBlendHex(bg,primary,.35);
+  r.style.setProperty('--border', _thmShade(borderTinted, isLight?.30:.50, !isLight));
+  r.style.setProperty('--white',  text);
+  r.style.setProperty('--purple', primary);
+  r.style.setProperty('--cyan',   accent);
+  r.style.setProperty('--gray',   isLight?'#555566':_thmBlendHex(text,bg,.4));
+  r.style.setProperty('--yellow', isLight?'#996600':'#ffd93d');
+  r.style.setProperty('--red',    isLight?'#cc2222':'#ff3838');
+  r.style.setProperty('--orange', isLight?'#cc5500':'#ffa502');
+  r.style.setProperty('--blue',   isLight?'#2266cc':'#74b9ff');
+  r.style.setProperty('--nav-bg', s(bg, isLight?.10:.15));
+}
+
+// Helpers
+function _thmPerceivedBrightness(hex){
+  try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return .299*r+.587*g+.114*b;}catch(e){return 0;}
+}
+// shade: for dark themes darken (amt>0 = darker), for light themes lighten
+function _thmShade(hex,amt,lighten){
+  try{
+    let rv=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    if(lighten){rv=Math.round(rv+(255-rv)*amt);g=Math.round(g+(255-g)*amt);b=Math.round(b+(255-b)*amt);}
+    else{rv=Math.round(rv*(1-amt));g=Math.round(g*(1-amt));b=Math.round(b*(1-amt));}
+    return '#'+[rv,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('');
+  }catch(e){return hex;}
+}
+function _thmBlendHex(a,b,t){
+  try{
+    const ar=parseInt(a.slice(1,3),16),ag=parseInt(a.slice(3,5),16),ab=parseInt(a.slice(5,7),16);
+    const br=parseInt(b.slice(1,3),16),bg2=parseInt(b.slice(3,5),16),bb=parseInt(b.slice(5,7),16);
+    return '#'+[ar+(br-ar)*t,ag+(bg2-ag)*t,ab+(bb-ab)*t].map(x=>Math.round(x).toString(16).padStart(2,'0')).join('');
+  }catch(e){return a;}
+}
+
+// Load theme on boot
+function thmBootLoad(){
+  if(!window._appS)return; // Supabase not ready yet
+  const t=_thmGetActive();
+  if(!t){
+    // No saved theme — ensure CSS is fully reset to defaults
+    document.documentElement.style.cssText='';
+    return;
+  }
+  // If it's a full preset (has bg2), apply full; otherwise from pickers
+  if(t.bg2){_thmApplyFull(t);}
+  else if(t.primary&&t.accent&&t.bg&&(t.text||t.white)){_thmApplyFromPickers(t.primary,t.accent,t.bg,t.text||t.white);}
+}
+thmBootLoad();
+
+// Read current picker values
+function _thmPickerVals(){
+  return {
+    primary:(document.getElementById('thm-pick-primary')||{}).value||THM_DEFAULT.primary,
+    accent: (document.getElementById('thm-pick-accent') ||{}).value||THM_DEFAULT.accent,
+    bg:     (document.getElementById('thm-pick-bg')     ||{}).value||THM_DEFAULT.bg,
+    text:   (document.getElementById('thm-pick-text')   ||{}).value||THM_DEFAULT.white,
+  };
+}
+
+// Check if two theme objects are equal on the 4 picker fields
+function _thmEqual(a,b){
+  return a.primary===b.primary && a.accent===b.accent && a.bg===b.bg && a.text===b.text;
+}
+// Compare picker vals to default
+function _thmIsDefault(v){
+  return v.primary===THM_DEFAULT.primary && v.accent===THM_DEFAULT.accent &&
+         v.bg===THM_DEFAULT.bg && v.text===THM_DEFAULT.white;
+}
+
+// Update live preview strip from current pickers
+function _thmLivePreview(){
+  const v=_thmPickerVals();
+  const isLight=_thmPerceivedBrightness(v.bg)>128;
+  const cardBg=_thmShade(v.bg,.25,isLight);
+  const borderTinted=_thmBlendHex(v.bg,v.primary,.35);
+  const borderCol=_thmShade(borderTinted, isLight?.30:.50, !isLight);
+  const trackCol=isLight?'rgba(0,0,0,.12)':'rgba(255,255,255,.15)';
+  const strip=document.getElementById('thm-preview-strip');
+  if(strip){strip.style.background=cardBg;strip.style.borderColor=borderCol;strip.style.color=v.text;}
+  const t=document.getElementById('thm-prev-title');if(t){t.style.color=v.primary;}
+  const b1=document.getElementById('thm-prev-btn1');if(b1){b1.style.background=v.primary;b1.style.color=_thmPerceivedBrightness(v.primary)>160?'#000':'#fff';}
+  const b2=document.getElementById('thm-prev-btn2');if(b2){b2.style.background=v.accent;b2.style.color=_thmPerceivedBrightness(v.accent)>160?'#000':'#fff';}
+  const track=document.getElementById('thm-prev-track');if(track)track.style.background=trackCol;
+  const bar=document.getElementById('thm-prev-bar');if(bar)bar.style.background=v.primary;
+  const txt=document.getElementById('thm-prev-text');if(txt)txt.style.color=v.text;
+  thmUpdateBuyBtn();
+}
+
+// Wire pickers to live preview — once only
+function _thmWirePickers(){
+  if(window._thmPickersWired)return;
+  window._thmPickersWired=true;
+  ['primary','accent','bg','text'].forEach(key=>{
+    const inp=document.getElementById('thm-pick-'+key);
+    const lbl=document.getElementById('thm-label-'+key);
+    if(!inp)return;
+    inp.addEventListener('input',()=>{if(lbl)lbl.textContent=inp.value;_thmLivePreview();});
+  });
+}
+
+// Determine buy button state
+function thmUpdateBuyBtn(){
+  const btn=document.getElementById('thm-buy-btn');
+  const status=document.getElementById('thm-buy-status');
+  if(!btn||!status)return;
+  const v=_thmPickerVals();
+  // Exact default → free, can't buy
+  if(_thmIsDefault(v)){
+    btn.disabled=true;btn.style.opacity='0.4';
+    btn.textContent='✅ DEFAULT — Free';
+    status.textContent='The default theme is always free.';return;
+  }
+  // Exact match to a preset that is free
+  const freePreset=THM_PRESETS.find(p=>p.free&&p.id!=='default'&&_thmEqual(v,p));
+  if(freePreset){
+    btn.disabled=true;btn.style.opacity='0.4';
+    btn.textContent='✅ FREE PRESET';
+    status.textContent='This preset is free.';return;
+  }
+  // Already owned exact match
+  const owned=_thmGetOwned();
+  const ownedMatch=owned.find(o=>_thmEqual(v,o));
+  if(ownedMatch){
+    btn.disabled=true;btn.style.opacity='0.5';
+    btn.textContent='✅ Already Owned — "'+ownedMatch.name+'"';
+    status.textContent='You already own this exact theme.';return;
+  }
+  // Matches a non-free preset exactly — needs purchase
+  const presetMatch=THM_PRESETS.find(p=>!p.free&&_thmEqual(v,p));
+  // Not enough cash
+  if(window._appState.cash<THM_PRICE){
+    btn.disabled=true;btn.style.opacity='0.5';
+    btn.textContent='💰 BUY — 500 (Need more cash)';
+    status.textContent='You need 500 💰. You have '+window._appState.cash.toLocaleString()+' 💰.';return;
+  }
+  btn.disabled=false;btn.style.opacity='1';
+  btn.textContent='💰 BUY THEME — 500';
+  status.textContent=presetMatch?('Buy the '+presetMatch.name+' preset for 500 💰.'):'Buy & save this custom theme for 500 💰.';
+}
+
+// Reset to default (wipes all inline styles)
+function thmReset(){
+  document.documentElement.style.cssText='';
+  _thmSetActive(null);
+  window._thmPreviewActive=false;
+  // Reset pickers to actual default
+  const d=THM_DEFAULT;
+  const setV=(k,val)=>{const i=document.getElementById('thm-pick-'+k);const l=document.getElementById('thm-label-'+k);if(i)i.value=val;if(l)l.textContent=val;};
+  setV('primary',d.primary);setV('accent',d.accent);setV('bg',d.bg);setV('text',d.white);
+  _thmLivePreview();
+  toast('↩ Reset to default theme');
+}
+
+// Load a preset into pickers (does NOT apply yet — user must hit Apply or Buy)
+function thmLoadPreset(id){
+  const p=THM_PRESETS.find(x=>x.id===id);if(!p)return;
+  const setV=(k,val)=>{const i=document.getElementById('thm-pick-'+k);const l=document.getElementById('thm-label-'+k);if(i)i.value=val;if(l)l.textContent=val;};
+  setV('primary',p.primary);setV('accent',p.accent);setV('bg',p.bg);setV('text',p.text);
+  _thmLivePreview();
+  // Auto-apply preset immediately so user can see it live
+  if(p.free||p.id==='default'){
+    _thmApplyFull(p);
+    _thmSetActive(p);
+    toast('✅ '+p.name+' applied (free)');
+  } else {
+    // Check if user already owns this preset
+    const owned=_thmGetOwned();
+    const alreadyOwned=owned.find(o=>_thmEqual({primary:p.primary,accent:p.accent,bg:p.bg,text:p.text},o));
+    if(alreadyOwned){
+      _thmApplyFull(p);
+      _thmSetActive(p);
+      toast('🎨 '+p.name+' applied (owned)!');
+      window._thmPreviewActive=false;
+    } else {
+      _thmApplyFull(p);  // preview only — NOT saved, reverts when leaving shop
+      window._thmPreviewActive=true;
+      toast('⚡ '+p.name+' previewed — buy to keep it!');
+    }
+  }
+}
+
+// Buy button
+function thmBuy(){
+  const v=_thmPickerVals();
+  if(_thmIsDefault(v)){toast('Default is free, no need to buy!');return;}
+  const owned=_thmGetOwned();
+  if(owned.find(o=>_thmEqual(v,o))){toast('You already own this theme!');return;}
+  if(window._appState.cash<THM_PRICE){toast('Not enough cash! Need 500 💰');return;}
+  showModal('🎨 NAME YOUR THEME',
+    '<div style="font-size:14px;color:var(--gray);margin-bottom:12px;">Give this theme a name to save it permanently.</div>'+
+    '<input id="thm-name-input" type="text" placeholder="e.g. Midnight Purple..." maxlength="30" '+
+    'style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:\'Rajdhani\',sans-serif;font-size:15px;padding:10px;outline:none;">'+
+    '<div style="font-size:13px;color:var(--yellow);margin-top:10px;">Cost: 500 💰 · You have: '+window._appState.cash.toLocaleString()+' 💰</div>',
+    [
+      {txt:'💰 CONFIRM BUY',cls:'btn-yellow',fn:()=>{
+        const nameEl=document.getElementById('thm-name-input');
+        const name=(nameEl?nameEl.value.trim():'')||'My Theme';
+        window._appState.cash-=THM_PRICE;
+        window._appS.set('state',window._appState);
+        const arr=_thmGetOwned();
+        // Find full preset match to store full vars, otherwise store picker vals
+        const presetMatch=THM_PRESETS.find(p=>_thmEqual(v,p));
+        const entry=presetMatch
+          ? {...presetMatch,name,boughtAt:window._appTodayStr()}
+          : {name,primary:v.primary,accent:v.accent,bg:v.bg,text:v.text,boughtAt:window._appTodayStr()};
+        arr.push(entry);
+        _thmSetOwned(arr);
+        // Apply and persist as active theme
+        if(presetMatch){_thmApplyFull(presetMatch);}
+        else{_thmApplyFromPickers(v.primary,v.accent,v.bg,v.text);}
+        _thmSetActive(entry);
+        window._thmPreviewActive=false; // no longer a preview
+        closeModal();
+        if(window.updateUI)window.updateUI();
+        thmRenderOwned();thmUpdateBuyBtn();
+        toast('🎨 "'+name+'" purchased & applied!');
+      }},
+      {txt:'Cancel',cls:'btn-purple',fn:closeModal}
+    ]
+  );
+}
+
+// Render preset grid
+function thmRenderPresets(){
+  _thmWirePickers();
+  const grid=document.getElementById('thm-preset-grid');if(!grid)return;
+  grid.innerHTML='';
+  // Sync pickers to current active theme on first open
+  const active=_thmGetActive();
+  if(active&&!window._thmPickersSynced){
+    window._thmPickersSynced=true;
+    const setV=(k,val)=>{const i=document.getElementById('thm-pick-'+k);const l=document.getElementById('thm-label-'+k);if(i&&val)i.value=val;if(l&&val)l.textContent=val;};
+    setV('primary',active.primary);setV('accent',active.accent);setV('bg',active.bg);setV('text',active.text||active.white);
+  }
+  THM_PRESETS.forEach(p=>{
+    const div=document.createElement('div');
+    const isLight=_thmPerceivedBrightness(p.bg)>128;
+    div.style.cssText=`background:linear-gradient(135deg,${p.bg},${p.primary});border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;border:2px solid transparent;transition:border-color .2s;`;
+    const labelColor=isLight?p.primary:'#fff';
+    div.innerHTML=`<div style="font-size:18px;margin-bottom:3px;">${p.free?'⭐':''}</div>`+
+      `<div style="font-size:10px;font-weight:700;color:${labelColor};letter-spacing:1px;line-height:1.2;">${p.name}</div>`+
+      (p.free?`<div style="font-size:9px;color:${p.accent||labelColor};margin-top:2px;font-weight:700;">FREE</div>`:`<div style="font-size:9px;color:${labelColor};margin-top:2px;opacity:.8;">500 💰</div>`);
+    div.onmouseover=()=>div.style.borderColor=p.primary;
+    div.onmouseout=()=>div.style.borderColor='transparent';
+    div.onclick=()=>thmLoadPreset(p.id);
+    grid.appendChild(div);
+  });
+  _thmLivePreview();
+}
+
+// Render owned themes list
+function thmRenderOwned(){
+  const list=document.getElementById('thm-owned-list');if(!list)return;
+  const owned=_thmGetOwned();
+  if(!owned.length){
+    list.innerHTML='<div style="font-size:14px;color:var(--gray);padding:8px 0;">No owned themes yet. Buy a preset or custom theme above for 500 💰!</div>';return;
+  }
+  list.innerHTML='';
+  owned.forEach((t,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;';
+    row.innerHTML=
+      `<div style="width:36px;height:36px;border-radius:7px;flex-shrink:0;background:linear-gradient(135deg,${t.bg||'#080810'},${t.primary});border:2px solid ${t.primary}66;"></div>`+
+      `<div style="flex:1;min-width:0;">`+
+        `<div style="font-size:14px;font-weight:700;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.name}</div>`+
+        `<div style="font-size:12px;color:var(--gray);margin-top:1px;">${t.boughtAt||''} · ${t.primary}</div>`+
+      `</div>`+
+      `<button onclick="thmApplyOwned(${i})" style="background:var(--purple);border:none;border-radius:6px;color:#fff;padding:6px 14px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;flex-shrink:0;">APPLY</button>`;
+    list.appendChild(row);
+  });
+}
+
+// Apply an owned theme
+function thmApplyOwned(i){
+  const owned=_thmGetOwned();
+  const t=owned[i];if(!t)return;
+  const setV=(k,val)=>{const inp=document.getElementById('thm-pick-'+k);const lbl=document.getElementById('thm-label-'+k);if(inp&&val)inp.value=val;if(lbl&&val)lbl.textContent=val;};
+  setV('primary',t.primary);setV('accent',t.accent);setV('bg',t.bg);setV('text',t.text||t.white);
+  if(t.bg2){_thmApplyFull(t);}
+  else{_thmApplyFromPickers(t.primary,t.accent,t.bg,t.text||t.white);}
+  _thmSetActive(t);
+  _thmLivePreview();
+  toast('🎨 "'+t.name+'" applied!');
+}
+
+window.thmReset=thmReset;
+window.thmBuy=thmBuy;
+window.thmApplyOwned=thmApplyOwned;
+window.thmLoadPreset=thmLoadPreset;
+// ═══════════════════════════════════════════
+// END THEME SHOP
+// ═══════════════════════════════════════════
+
 </script>
 </body>
 </html>
