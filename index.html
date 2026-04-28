@@ -4155,10 +4155,14 @@ function renderCharts(){
   const avgMiss=(missData.reduce((a,b)=>a+b,0)/7).toFixed(1);
   const avgProg=(pData.reduce((a,b)=>a+b,0)/7).toFixed(1);
   document.getElementById('charts-stats-inner').innerHTML=`📊 Avg Progress: ${avgProg}% | Avg XP: ${avgXP} | Avg Study: ${avgStudy}h/day | Avg Missions: ${avgMiss}`;
-  drawLineChart('chart-progress',labels,pData,'#6c5ce7',80,'A-Tier (80%)','%');
-  drawBarChart('chart-xp',labels,xpData,'#00d2a0',800,'Target 800 XP','XP');
-  drawLineChart('chart-study',labels,studyData,'#ff6348',8,'Target 8h','h',true);
-  drawBarChart('chart-missions',labels,missData,'#ffd93d',30,'Target 30','missions');
+  // Use requestAnimationFrame so the browser has laid out the canvases
+  // before we read offsetWidth — otherwise we get 0 and charts render blank.
+  requestAnimationFrame(()=>{
+    drawLineChart('chart-progress',labels,pData,'#6c5ce7',80,'A-Tier (80%)','%');
+    drawBarChart('chart-xp',labels,xpData,'#00d2a0',800,'Target 800 XP','XP');
+    drawLineChart('chart-study',labels,studyData,'#ff6348',8,'Target 8h','h',true);
+    drawBarChart('chart-missions',labels,missData,'#ffd93d',30,'Target 30','missions');
+  });
 }
 
 function drawLineChart(id,labels,data,color,targetVal,targetLabel,unit,fill){
