@@ -1843,14 +1843,15 @@ function renderWeeklyChart() {
   }
   const xpVals = weekDates.map(d => (weekly_data[d] || {}).xp || 0);
   const maxXP = Math.max(...xpVals, 1);
-  const CHART_H = 44; // px — total chart height for bars
+  const CHART_H = 44;
   el.innerHTML = weekDates.map((d, i) => {
     const xp = xpVals[i];
-    // Scale: even 1 XP gets a 2px sliver; max fills the chart
-    const h = xp > 0 ? Math.max(2, Math.round((xp / maxXP) * CHART_H)) : 2;
+    const logged = weekly_data[d] && typeof weekly_data[d] === 'object';
+    const h = xp > 0 ? Math.max(2, Math.round((xp / maxXP) * CHART_H)) : (logged ? 3 : 2);
     const isToday = d === todayStr();
-    const opacity = xp === 0 ? '0.18' : '1';
-    return `<div class="mini-bar" style="background:${isToday?'var(--purple)':'var(--cyan)'};height:${h}px;opacity:${opacity}"><div class="tip">${xp} XP</div></div>`;
+    // logged+0xp = faint bar so you can see it was submitted; not logged = near invisible
+    const opacity = xp > 0 ? '1' : (logged ? '0.35' : '0.12');
+    return `<div class="mini-bar" style="background:${isToday?'var(--purple)':'var(--cyan)'};height:${h}px;opacity:${opacity}"><div class="tip">${logged?(xp+' XP'):'not logged'}</div></div>`;
   }).join('');
 }
 
@@ -3884,16 +3885,47 @@ function resetQSDefaults(){
 // ═══════════════════════════════════════════
 function renderWeekly(){
   const tbody=document.getElementById('weekly-tbody');tbody.innerHTML='';
-  const weeks=Object.keys(weekly_data).filter(k=>k.startsWith('week_')&&weekly_data[k].weekly).sort().reverse();
+  // Build a set of all week_ keys with a summary
+  const weeks=Object.keys(weekly_data).filter(k=>k.startsWith('week_')&&weekly_data[k]&&weekly_data[k].weekly).sort().reverse();
+  // Also include current week if it has daily data but no week_ summary yet
+  const curWk=weekKey();
+  if(!weeks.includes(curWk)){
+    const curStart=curWk.slice(5);
+    const hasDailyData=Object.keys(weekly_data).some(k=>!k.startsWith('week_')&&k>=curStart&&weekly_data[k]&&typeof weekly_data[k]==='object');
+    if(hasDailyData)weeks.unshift(curWk);
+  }
   document.getElementById('no-weekly').style.display=weeks.length?'none':'block';
   weeks.forEach(wk=>{
-    const d=weekly_data[wk].weekly;if(!d)return;
+    // Build readable label: "Apr 28 – May 4"
+    const startStr=wk.slice(5);
+    const startDate=new Date(startStr);
+    const endDate=new Date(startDate);endDate.setDate(startDate.getDate()+6);
+    const fmt=d=>d.toLocaleDateString('en',{month:'short',day:'numeric'});
+    const weekLabel=`${fmt(startDate)} – ${fmt(endDate)}`;
+
+    // Use saved summary or compute live from daily data
+    let d=weekly_data[wk]&&weekly_data[wk].weekly;
+    if(!d){
+      // compute on the fly from daily entries
+      const weekEnd=`${endDate.getFullYear()}-${String(endDate.getMonth()+1).padStart(2,'0')}-${String(endDate.getDate()).padStart(2,'0')}`;
+      const today=todayStr();
+      const wDays=Object.keys(weekly_data).filter(k=>!k.startsWith('week_')&&k>=startStr&&k<=weekEnd&&k<=today&&weekly_data[k]&&typeof weekly_data[k]==='object');
+      if(!wDays.length)return;
+      const totalXP=wDays.reduce((a,k)=>a+(weekly_data[k].xp||0),0);
+      const avgXP=totalXP/wDays.length;
+      const avgStudy=wDays.reduce((a,k)=>a+(weekly_data[k].study||0),0)/wDays.length;
+      const perfectDays=wDays.filter(k=>weekly_data[k].perfect).length;
+      const fapCount=wDays.filter(k=>weekly_data[k].fap).length;
+      const avgProgress=wDays.reduce((a,k)=>a+(weekly_data[k].pointer!=null?weekly_data[k].pointer:(weekly_data[k].xp>800?100:weekly_data[k].xp>500?70:weekly_data[k].xp>300?50:30)),0)/wDays.length;
+      const t=getTier(avgProgress);
+      d={avg_progress:Math.round(avgProgress),tier:t.t,avg_xp:avgXP,total_xp:totalXP,avg_study:avgStudy.toFixed(1),perfect_days:`${perfectDays}/${wDays.length}`,fap_count:fapCount};
+    }
     const prog=d.avg_progress||0;
     const rowColor=prog>=80?'#1a5c1a':prog>=60?'#5c5c1a':prog>=40?'#5c2e1a':'#5c1a1a';
     const txtColor=prog>=80?'#00ff00':prog>=60?'#ffaa00':prog>=40?'#ff9900':'#ff3333';
     const tr=document.createElement('tr');
     tr.style.background=rowColor;tr.style.color=txtColor;
-    tr.innerHTML=`<td>${wk}</td><td>${prog}%</td><td>${d.tier||'F'}</td><td>${(d.avg_xp||0).toFixed(0)}</td><td>${d.total_xp||0}</td><td>${d.avg_study||'0'}h/d</td><td>${d.perfect_days||'0/0'}</td><td>${d.fap_count===0?'✅ CLEAN':'❌ '+d.fap_count}</td>`;
+    tr.innerHTML=`<td>${weekLabel}</td><td>${prog}%</td><td>${d.tier||'F'}</td><td>${(d.avg_xp||0).toFixed(0)}</td><td>${d.total_xp||0}</td><td>${d.avg_study||'0'}h/d</td><td>${d.perfect_days||'0/0'}</td><td>${d.fap_count===0?'✅ CLEAN':'❌ '+d.fap_count}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -3935,7 +3967,7 @@ function _doSubmitLog(){
   const weekStart=wk.slice(5);
   const weekEndDate=new Date(weekStart);weekEndDate.setDate(weekEndDate.getDate()+6);
   const weekEnd=`${weekEndDate.getFullYear()}-${String(weekEndDate.getMonth()+1).padStart(2,'0')}-${String(weekEndDate.getDate()).padStart(2,'0')}`;
-  const weekDays=Object.keys(weekly_data).filter(k=>!k.startsWith('week_')&&k>=weekStart&&k<=weekEnd&&k<=today&&weekly_data[k].xp!==undefined);
+  const weekDays=Object.keys(weekly_data).filter(k=>!k.startsWith('week_')&&k>=weekStart&&k<=weekEnd&&k<=today&&weekly_data[k]&&typeof weekly_data[k]==='object');
   if(weekDays.length>0){
     const totalXP=weekDays.reduce((a,d)=>a+(weekly_data[d].xp||0),0);
     const avgXP=totalXP/weekDays.length;
@@ -4145,18 +4177,21 @@ function renderCharts(){
     studyData.push(wd.study||0);
     missData.push(wd.missions||0);
   }
-  const hasData=xpData.some(v=>v>0)||studyData.some(v=>v>0);
+  // hasData: true if ANY of the 7 days has a real log entry (even with 0 values)
+  const hasData=days.some(dk=>weekly_data[dk]&&typeof weekly_data[dk]==='object');
   document.getElementById('charts-empty').style.display=hasData?'none':'block';
   document.getElementById('charts-grid').style.display=hasData?'grid':'none';
   if(!hasData)return;
   document.getElementById('charts-stats').style.display='block';
-  const avgXP=(xpData.reduce((a,b)=>a+b,0)/7).toFixed(0);
-  const avgStudy=(studyData.reduce((a,b)=>a+b,0)/7).toFixed(1);
-  const avgMiss=(missData.reduce((a,b)=>a+b,0)/7).toFixed(1);
-  const avgProg=(pData.reduce((a,b)=>a+b,0)/7).toFixed(1);
+  // Only average over days that were actually logged
+  const loggedCount=days.filter(dk=>weekly_data[dk]&&typeof weekly_data[dk]==='object').length||1;
+  const avgXP=(xpData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(0);
+  const avgStudy=(studyData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(1);
+  const avgMiss=(missData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(1);
+  const avgProg=(pData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(1);
   document.getElementById('charts-stats-inner').innerHTML=`📊 Avg Progress: ${avgProg}% | Avg XP: ${avgXP} | Avg Study: ${avgStudy}h/day | Avg Missions: ${avgMiss}`;
-  // Use requestAnimationFrame so the browser has laid out the canvases
-  // before we read offsetWidth — otherwise we get 0 and charts render blank.
+  // Use requestAnimationFrame so the browser finishes layout before we read
+  // canvas.offsetWidth — without this it returns 0 and charts render blank.
   requestAnimationFrame(()=>{
     drawLineChart('chart-progress',labels,pData,'#6c5ce7',80,'A-Tier (80%)','%');
     drawBarChart('chart-xp',labels,xpData,'#00d2a0',800,'Target 800 XP','XP');
@@ -4253,10 +4288,12 @@ function drawBarChart(id,labels,data,color,targetVal,targetLabel,unit){
   // bars
   data.forEach((v,i)=>{
     const x=pad.l+i*(cW/labels.length)+gap/2,h=v*scY,y=pad.t+cH-h;
-    const grad=ctx.createLinearGradient(x,y,x,pad.t+cH);
-    grad.addColorStop(0,color);grad.addColorStop(1,color+'44');
-    ctx.fillStyle=grad;
-    ctx.beginPath();ctx.roundRect(x,y,bW,h,4);ctx.fill();
+    if(h>0){
+      const grad=ctx.createLinearGradient(x,y,x,pad.t+cH);
+      grad.addColorStop(0,color);grad.addColorStop(1,color+'44');
+      ctx.fillStyle=grad;
+      ctx.beginPath();ctx.roundRect(x,y,bW,h,4);ctx.fill();
+    }
     if(v>0){
       ctx.fillStyle=v>=targetVal?'#00d2a0':'rgba(255,255,255,0.9)';
       ctx.font='bold 12px Rajdhani';ctx.textAlign='center';
