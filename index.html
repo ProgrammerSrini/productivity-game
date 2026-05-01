@@ -5966,7 +5966,7 @@ function _thmWirePickers(){
     const inp=document.getElementById('thm-pick-'+key);
     const lbl=document.getElementById('thm-label-'+key);
     if(!inp)return;
-    inp.addEventListener('input',()=>{if(lbl)lbl.textContent=inp.value;_thmLivePreview();});
+    inp.addEventListener('input',()=>{if(lbl)lbl.textContent=inp.value;_thmLivePreview();const v=_thmPickerVals();_thmApplyFromPickers(v.primary,v.accent,v.bg,v.text);window._thmPreviewActive=true;});
   });
 }
 
