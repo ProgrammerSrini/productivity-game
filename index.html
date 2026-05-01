@@ -3921,8 +3921,10 @@ function renderWeekly(){
       d={avg_progress:Math.round(avgProgress),tier:t.t,avg_xp:avgXP,total_xp:totalXP,avg_study:avgStudy.toFixed(1),perfect_days:`${perfectDays}/${wDays.length}`,fap_count:fapCount};
     }
     const prog=d.avg_progress||0;
-    const rowColor=prog>=80?'#1a5c1a':prog>=60?'#5c5c1a':prog>=40?'#5c2e1a':'#5c1a1a';
-    const txtColor=prog>=80?'#00ff00':prog>=60?'#ffaa00':prog>=40?'#ff9900':'#ff3333';
+    const tierObj=getTier(prog);
+    const tierCol=tierObj.t==='S'?'#6c5ce7':tierObj.t==='A'?'#74b9ff':tierObj.c;
+    const rowColor=`${tierCol}22`;
+    const txtColor=tierCol;
     const tr=document.createElement('tr');
     tr.style.background=rowColor;tr.style.color=txtColor;
     tr.innerHTML=`<td>${weekLabel}</td><td>${prog}%</td><td>${d.tier||'F'}</td><td>${(d.avg_xp||0).toFixed(0)}</td><td>${d.total_xp||0}</td><td>${d.avg_study||'0'}h/d</td><td>${d.perfect_days||'0/0'}</td><td>${d.fap_count===0?'✅ CLEAN':'❌ '+d.fap_count}</td>`;
