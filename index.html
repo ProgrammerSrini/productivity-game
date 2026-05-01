@@ -4064,8 +4064,8 @@ function runAudit(){
   const routineCount=(sandhi?1:0)+(S2>=7?1:0)+(wake?1:0);
   const mr=1.0+(routineCount*0.08);
   const mb=fap?0.4:1.0;
-  const ts=Math.max(0,Math.min(100,(ps-pd)*mr*mb));
-  const newDisc=Math.round((state.pointer+ts)/2);
+  const ts=Math.max(0,(ps-pd)*mr*mb);
+  const newDisc=Math.min(100,Math.round((state.pointer+ts)/2));
   state.pointer=newDisc;S.set('state',state);updateUI();
   // store raw today score for threats
   state._lastRawScore=Math.round(ts);S.set('state',state);
