@@ -150,8 +150,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 .week-table td{padding:10px;text-align:center;border-bottom:1px solid var(--border);font-size:15px;}
 
 /* TOAST */
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--cyan);border-radius:8px;padding:10px 22px;font-size:15px;font-weight:600;z-index:9000;transition:.3s;max-width:320px;text-align:center;box-shadow:0 0 20px rgba(0,210,160,.3);}
-#toast.show{transform:translateX(-50%) translateY(0);}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:var(--bg3);border:1px solid var(--cyan);border-radius:8px;padding:10px 22px;font-size:15px;font-weight:600;z-index:9000;transition:transform .3s,opacity .3s;max-width:320px;text-align:center;box-shadow:0 0 20px rgba(0,210,160,.3);}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 @keyframes coach-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 select{-webkit-appearance:none;appearance:none;}
 /* COLLECTION */
@@ -1532,9 +1532,9 @@ function toast(msg,dur=2800){const el=document.getElementById('toast');el.textCo
     _processInterest();
     _checkInterestThreshold();
     // Reset all missions (fresh day)
-    const tickedYesterday=Object.keys(missions_status).filter(k=>missions_status[k]==='done');
+    const tickedYesterday=Object.keys(_yesterdayMissions).filter(k=>_yesterdayMissions[k]==='done');
     const _resetStreaks=()=>{if(typeof STREAK_MISSIONS!=='undefined'){STREAK_MISSIONS.forEach(m=>{if(!tickedYesterday.includes(m)){if(streaks[m])streaks[m].count=0;}});S.set('streaks',streaks);}};
-    setTimeout(_resetStreaks,0);
+    _resetStreaks();
     Object.keys(missions_status).forEach(k=>missions_status[k]='locked');
     S.set('missions',missions_status);
     S.set('state',state);
@@ -4385,7 +4385,7 @@ updateUI();
     {id:'premium', name:'PREMIUM', color:'#9b5ff5',basePrice:650,glowColor:'rgba(155,95,245,.35)',odds:{D:18,C:30,B:28,A:16,S:8}},
     {id:'ultra',   name:'ULTRA',   color:'#ff5050',basePrice:1600,glowColor:'rgba(255,80,80,.35)', odds:{D:2,C:10,B:30,A:32,S:26}},
   ];
-  const COL_PACKS=[{qty:1,disc:0},{qty:5,disc:0.08},{qty:10,disc:0.14}];
+  const COL_PACKS=[{qty:1,disc:0},{qty:5,disc:0.08},{qty:10,disc:0.18}];
   // Snapshot of original chest values for "Reset to Defaults"
   const COL_CHESTS_DEFAULT=COL_CHESTS.map(c=>({...c,odds:{...c.odds}}));
 
