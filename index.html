@@ -14,7 +14,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:var(--white);font-family:'Rajdhani',sans-serif;font-size:16px;min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:9999;}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,var(--scanline-color,rgba(0,0,0,.03)) 2px,var(--scanline-color,rgba(0,0,0,.03)) 4px);pointer-events:none;z-index:9999;}
 #nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--nav-bg,rgba(8,8,16,.97));border-bottom:1px solid var(--purple);display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:52px;backdrop-filter:blur(12px);}
 #nav-title{font-family:'Bebas Neue',cursive;font-size:20px;color:var(--purple);letter-spacing:3px;cursor:pointer;}
 #nav-title span{font-size:12px;color:var(--gray);letter-spacing:1px;font-family:'Rajdhani',sans-serif;font-weight:600;margin-left:6px;vertical-align:middle;}
@@ -255,6 +255,7 @@ select{-webkit-appearance:none;appearance:none;}
 </style>
 </head>
 <body>
+<canvas id="roachCanvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:500;"></canvas>
 <!-- AUTH SCREEN -->
 <style>
 #auth-screen{display:flex;position:fixed;inset:0;z-index:1000;background:var(--bg);align-items:flex-start;justify-content:center;padding:40px 24px;overflow-y:auto;}
@@ -883,7 +884,7 @@ select{-webkit-appearance:none;appearance:none;}
           <div id="thm-prev-btn1" style="padding:5px 10px;border-radius:5px;font-size:12px;font-weight:700;">PRIMARY</div>
           <div id="thm-prev-btn2" style="padding:5px 10px;border-radius:5px;font-size:12px;font-weight:700;">ACCENT</div>
         </div>
-        <div id="thm-prev-track" style="height:5px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.15);"><div id="thm-prev-bar" style="height:100%;width:65%;border-radius:4px;"></div></div>
+        <div id="thm-prev-track" style="height:5px;border-radius:4px;overflow:hidden;background:var(--border);"><div id="thm-prev-bar" style="height:100%;width:65%;border-radius:4px;"></div></div>
         <div id="thm-prev-text" style="font-size:12px;margin-top:6px;opacity:.85;">Sample text · 1234 XP · 500 💰</div>
       </div>
       <!-- Action buttons -->
@@ -1156,6 +1157,31 @@ select{-webkit-appearance:none;appearance:none;}
     <button class="btn btn-red btn-full" onclick="runAuditAndLog()">⚖️ AUDIT + SAVE LOG</button>
     <div id="audit-result" style="margin-top:10px;display:none"></div>
   </div>
+
+  <!-- INFESTATION METER — separate card -->
+  <div class="card" style="border-color:rgba(224,48,48,0.35);">
+    <div class="card-title" style="color:var(--red);margin-bottom:10px;">☣ INFESTATION METER</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:14px;color:var(--gray);">Roach level grows when you slack. Submit good logs to purge.</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="text-align:center;">
+          <div id="infestation-number" style="font-family:'Bebas Neue',cursive;font-size:36px;line-height:1;color:var(--red);text-shadow:0 0 12px rgba(224,48,48,0.5);">0</div>
+          <div style="font-size:11px;color:var(--gray);letter-spacing:1px;">INFESTATION</div>
+        </div>
+        <div style="text-align:center;">
+          <div id="roach-count-display" style="font-family:'Bebas Neue',cursive;font-size:36px;line-height:1;color:var(--orange);text-shadow:0 0 12px rgba(255,165,2,0.5);">0</div>
+          <div style="font-size:11px;color:var(--gray);letter-spacing:1px;">🪳 ROACHES</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:18px;overflow:visible;position:relative;border:1px solid rgba(224,48,48,0.2);">
+      <div id="infestation-fill" style="height:100%;border-radius:5px;background:#e03030;width:0%;transition:width 1.2s ease;max-width:none;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--gray);">
+      <span>CLEAN</span><span>MILD</span><span>SEVERE</span><span>OVERRUN</span>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">🎯 GOAL CALCULATOR</div>
     <div style="font-size:14px;color:var(--gray);margin-bottom:12px">What inputs do I need to hit a target progress%?</div>
@@ -1454,6 +1480,8 @@ async function _loadCustomImgs(){
 const CUSTOM_IMG={};  // global so _saveCustomImg/_loadCustomImgs can access it before _bootApp runs
 
 function _bootApp(){
+// Sync infestation from Supabase now that S is ready
+if(typeof window._syncInfestationFromSupabase === 'function') window._syncInfestationFromSupabase();
 // Load custom chest sound if it exists in user data
 const savedSound = S.get('custom_chest_sound', null);
 if (savedSound) {
@@ -1511,14 +1539,9 @@ function toast(msg,dur=2800){const el=document.getElementById('toast');el.textCo
     if(last){
       const diffDays=Math.floor((new Date(today)-new Date(last))/86400000);
       if(diffDays>1){
-        // Missed days: break any streak that wasn't updated recently
-        Object.keys(streaks).forEach(m=>{
-          if(streaks[m]&&streaks[m].last){
-            const lastLogDiff=Math.round((new Date(today)-new Date(streaks[m].last))/86400000);
-            if(lastLogDiff>1) streaks[m].count=0;
-          }
-        });
-        S.set('streaks',streaks);
+        // Missed multiple days — defer to the IIFE below where STREAK_GROUPS is defined.
+        // Store the gap so it can reset ALL missions not logged within the window.
+        window._pendingMultiDayDiff=diffDays;
       }
     }
     // ── SNAPSHOT missions completion BEFORE resetting (needed for gamble resolution) ──
@@ -1533,8 +1556,9 @@ function toast(msg,dur=2800){const el=document.getElementById('toast');el.textCo
     _checkInterestThreshold();
     // Reset all missions (fresh day)
     const tickedYesterday=Object.keys(_yesterdayMissions).filter(k=>_yesterdayMissions[k]==='done');
-    const _resetStreaks=()=>{if(typeof STREAK_MISSIONS!=='undefined'){STREAK_MISSIONS.forEach(m=>{if(!tickedYesterday.includes(m)){if(streaks[m])streaks[m].count=0;}});S.set('streaks',streaks);}};
-    _resetStreaks();
+    // _resetStreaks deferred — STREAK_GROUPS not yet declared at this point
+    // will be called immediately after STREAK_GROUPS/_getStreakMissions are defined below
+    window._pendingStreakReset=tickedYesterday;
     Object.keys(missions_status).forEach(k=>missions_status[k]='locked');
     S.set('missions',missions_status);
     S.set('state',state);
@@ -1705,6 +1729,35 @@ function _syncStreakGroups(){
 // Flat list for autoUpdateStreaks — all missions across all groups
 function _getStreakMissions(){return STREAK_GROUPS?STREAK_GROUPS.flatMap(g=>g.missions):[];}
 const STREAK_MISSIONS=new Proxy([],{get(_,p){return _getStreakMissions()[p];}});// keep compat
+// Execute deferred streak reset now that STREAK_GROUPS is defined
+(()=>{
+  const allMissions=_getStreakMissions();
+  if(window._pendingStreakReset!==undefined){
+    const tickedYesterday=window._pendingStreakReset||[];
+    // Normal 1-day miss: reset any mission not ticked yesterday
+    allMissions.forEach(m=>{
+      if(!tickedYesterday.includes(m)){
+        if(!streaks[m]) streaks[m]={count:0,last:null};
+        else streaks[m].count=0;
+      }
+    });
+    S.set('streaks',streaks);
+    window._pendingStreakReset=undefined;
+  }
+  if(window._pendingMultiDayDiff>1){
+    // Multi-day miss: reset ALL missions not logged within the gap
+    allMissions.forEach(m=>{
+      const lastLogged=streaks[m]&&streaks[m].last?streaks[m].last:null;
+      const daysSinceLog=lastLogged?Math.round((new Date(todayStr())-new Date(lastLogged))/86400000):999;
+      if(daysSinceLog>1){
+        if(!streaks[m]) streaks[m]={count:0,last:null};
+        else streaks[m].count=0;
+      }
+    });
+    S.set('streaks',streaks);
+    window._pendingMultiDayDiff=null;
+  }
+})()
 
 // BADGES defined earlier (before auto-reset IIFE) — see above
 
@@ -1749,12 +1802,14 @@ function updateUI(){
   const td=document.getElementById('tier-display');
   td.textContent=tier.t;
   // S tier: white letter with white glow; others: tier colour
+  const _thBg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#0a0a18';
+  const _thIsLight=_thmPerceivedBrightness(_thBg)>128;
   if(tier.t==='S'){
-    td.style.color='#ffffff';
-    td.style.textShadow='0 0 20px rgba(255,255,255,.8), 0 0 44px rgba(255,255,255,.3)';
+    td.style.color=_thIsLight?'#5533cc':'#ffffff';
+    td.style.textShadow=_thIsLight?'none':'0 0 20px rgba(255,255,255,.8), 0 0 44px rgba(255,255,255,.3)';
   } else {
     td.style.color=tier.c;
-    td.style.textShadow='0 0 30px currentColor';
+    td.style.textShadow=_thIsLight?'none':'0 0 30px currentColor';
   }
   document.getElementById('progress-pct').textContent=v+'%';
   document.getElementById('tier-msg').textContent=tier.m;
@@ -4034,7 +4089,7 @@ function runGoalCalc() {
   } else {
     const renderRow = (title, hours, color, subtitle) => {
       if (hours > 16) return `<div style="padding:8px 0; opacity:0.5; font-size:12px">❌ ${title}: Impossible (>16h study)</div>`;
-      return `<div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05)">
+      return `<div style="padding:10px 0; border-bottom:1px solid var(--border)">
         <div style="color:${color}; font-weight:700; font-size:14px">${title}</div>
         <div style="font-size:15px; color:var(--white)">Study <strong>${hours.toFixed(1)} hours</strong></div>
         <div style="font-size:11px; color:var(--gray)">${subtitle}</div>
@@ -4071,6 +4126,7 @@ function runAudit(){
   state.pointer=newDisc;S.set('state',state);updateUI();
   // store raw today score for threats
   state._lastRawScore=Math.round(ts);S.set('state',state);
+  if(typeof window._updateInfestation==='function') window._updateInfestation(Math.round(ts));
   const el=document.getElementById('audit-result');el.style.display='block';
   el.innerHTML=`<div class="card" style="border-color:var(--purple)"><div style="font-size:14px;line-height:2;font-family:'Share Tech Mono',monospace">Study Engine: ${ps.toFixed(1)}<br>Penalty: -${pd.toFixed(1)}<br>Routine Mult: ${mr}x<br>${fap?'<span style="color:var(--red)">BREACH: 0.1x</span><br>':''}<hr style="border-color:var(--border);margin:4px 0"><strong style="color:var(--cyan)">Score: ${ts.toFixed(1)}%</strong><br><strong style="color:var(--yellow)">New Baseline: ${newDisc}%</strong></div></div>`;
   toast(`Audit: ${ts.toFixed(1)}% → Baseline ${newDisc}%`);
@@ -4213,14 +4269,19 @@ function drawLineChart(id,labels,data,color,targetVal,targetLabel,unit,fill){
   const W=cssW,H=cssH,pad={t:24,r:14,b:38,l:46};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   ctx.clearRect(0,0,W,H);
+  const bgCol=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#0a0a18';
+  const isLightBg=_thmPerceivedBrightness(bgCol)>128;
+  const gridCol=isLightBg?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.08)';
+  const labelCol=isLightBg?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.55)';
+  const xLabelCol=isLightBg?'rgba(0,0,0,0.65)':'rgba(255,255,255,0.65)';
   const max=Math.max(...data,targetVal)*1.25||10;
   const scX=cW/(labels.length-1||1),scY=cH/max;
   // grid
-  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;
+  ctx.strokeStyle=gridCol;ctx.lineWidth=1;
   for(let i=0;i<=4;i++){
     const y=pad.t+cH-i*(cH/4);
     ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='bold 12px Rajdhani';ctx.textAlign='right';
+    ctx.fillStyle=labelCol;ctx.font='bold 12px Rajdhani';ctx.textAlign='right';
     ctx.fillText(Math.round(max*i/4)+unit,pad.l-5,y+4);
   }
   // target line
@@ -4247,7 +4308,7 @@ function drawLineChart(id,labels,data,color,targetVal,targetLabel,unit,fill){
     const x=pad.l+i*scX,y=pad.t+cH-v*scY;
     ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);
     ctx.fillStyle=v>=targetVal?'#00d2a0':color;ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,.6)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.strokeStyle=isLightBg?'rgba(255,255,255,.6)':'rgba(0,0,0,.6)';ctx.lineWidth=1.5;ctx.stroke();
     if(v>0){
       ctx.fillStyle=v>=targetVal?'#00d2a0':color;
       ctx.font='bold 13px Rajdhani';ctx.textAlign='center';
@@ -4255,7 +4316,7 @@ function drawLineChart(id,labels,data,color,targetVal,targetLabel,unit,fill){
     }
   });
   // x labels
-  ctx.fillStyle='rgba(255,255,255,0.65)';ctx.font='bold 12px Rajdhani';ctx.textAlign='center';
+  ctx.fillStyle=xLabelCol;ctx.font='bold 12px Rajdhani';ctx.textAlign='center';
   labels.forEach((l,i)=>{ctx.fillText(l.split(',')[0],pad.l+i*scX,H-8);});
 }
 
@@ -4270,14 +4331,20 @@ function drawBarChart(id,labels,data,color,targetVal,targetLabel,unit){
   const W=cssW,H=cssH,pad={t:14,r:14,b:38,l:46};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   ctx.clearRect(0,0,W,H);
+  const bgCol=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#0a0a18';
+  const isLightBg=_thmPerceivedBrightness(bgCol)>128;
+  const gridCol=isLightBg?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.08)';
+  const labelCol=isLightBg?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.55)';
+  const xLabelCol=isLightBg?'rgba(0,0,0,0.65)':'rgba(255,255,255,0.65)';
+  const barTextCol=isLightBg?'rgba(0,0,0,0.85)':'rgba(255,255,255,0.9)';
   const max=Math.max(...data,targetVal)*1.25||10;
   const scY=cH/max,bW=(cW/labels.length)*0.65,gap=(cW/labels.length)*0.35;
   // grid
-  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;
+  ctx.strokeStyle=gridCol;ctx.lineWidth=1;
   for(let i=0;i<=4;i++){
     const y=pad.t+cH-i*(cH/4);
     ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='bold 12px Rajdhani';ctx.textAlign='right';
+    ctx.fillStyle=labelCol;ctx.font='bold 12px Rajdhani';ctx.textAlign='right';
     ctx.fillText(Math.round(max*i/4),pad.l-5,y+4);
   }
   // target line
@@ -4297,13 +4364,13 @@ function drawBarChart(id,labels,data,color,targetVal,targetLabel,unit){
       ctx.beginPath();ctx.roundRect(x,y,bW,h,4);ctx.fill();
     }
     if(v>0){
-      ctx.fillStyle=v>=targetVal?'#00d2a0':'rgba(255,255,255,0.9)';
+      ctx.fillStyle=v>=targetVal?'#00d2a0':barTextCol;
       ctx.font='bold 12px Rajdhani';ctx.textAlign='center';
       ctx.fillText(v,x+bW/2,y-5);
     }
   });
   // x labels
-  ctx.fillStyle='rgba(255,255,255,0.65)';ctx.font='bold 12px Rajdhani';ctx.textAlign='center';
+  ctx.fillStyle=xLabelCol;ctx.font='bold 12px Rajdhani';ctx.textAlign='center';
   labels.forEach((l,i)=>{ctx.fillText(l.split(',')[0],pad.l+i*(cW/labels.length)+bW/2+gap/2,H-8);});
 }
 
@@ -5823,8 +5890,8 @@ const THM_PRESETS = [
   },
   // WHITE MODE — light background, dark text, everything inverted properly
   {id:'white', name:'WHITE MODE',
-    primary:'#5b4fcf', accent:'#00a87a', bg:'#f0f0f8', text:'#111122',
-    bg2:'#e8e8f2', bg3:'#dddde8', bg4:'#d0d0de', border:'#bbbbcc',
+    primary:'#5b4fcf', accent:'#00a87a', bg:'#ffffff', text:'#111122',
+    bg2:'#f5f5f5', bg3:'#eeeeee', bg4:'#e8e8e8', border:'#d0d0d8',
     gray:'#666688', yellow:'#b08800', red:'#cc2222', orange:'#cc5500', blue:'#2266cc',
   },
   // DARK MODE — pure black, high contrast
@@ -5858,6 +5925,8 @@ function _thmApplyFull(t){
   r.style.setProperty('--red',    t.red);
   r.style.setProperty('--orange', t.orange);
   r.style.setProperty('--blue',   t.blue);
+  const isLight=_thmPerceivedBrightness(t.bg)>128;
+  r.style.setProperty('--scanline-color', isLight?'transparent':'rgba(0,0,0,.03)');
 }
 
 // For custom (picker-based) themes without full var set — derive from 4 pickers
@@ -5883,6 +5952,7 @@ function _thmApplyFromPickers(primary,accent,bg,text){
   r.style.setProperty('--orange', isLight?'#cc5500':'#ffa502');
   r.style.setProperty('--blue',   isLight?'#2266cc':'#74b9ff');
   r.style.setProperty('--nav-bg', s(bg, isLight?.10:.15));
+  r.style.setProperty('--scanline-color', isLight?'transparent':'rgba(0,0,0,.03)');
 }
 
 // Helpers
@@ -6166,5 +6236,262 @@ window.thmLoadPreset=thmLoadPreset;
 // ═══════════════════════════════════════════
 
 </script>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// INFESTATION SYSTEM — hardcoded colors, never theme-affected
+// Roach count is always proportional to infestation level
+// Triggered by RAW score from runAudit, not averaged baseline
+// ════════════════════════════════════════════════════════════════
+(function(){
+  const rc = document.getElementById('roachCanvas');
+  const rctx = rc.getContext('2d');
+  let RW, RH;
+  function rsz(){ RW = rc.width = window.innerWidth; RH = rc.height = window.innerHeight; }
+  rsz(); window.addEventListener('resize', rsz);
+
+  // Global infestation state — persisted in Supabase via S.get/S.set
+  // S may not be ready at IIFE time (runs before _bootApp), so we expose a sync function
+  let _infestation = 0;
+  let _roaches = [];
+
+  // Called from _bootApp after S is populated
+  window._syncInfestationFromSupabase = function(){
+    const saved = (typeof S !== 'undefined') ? S.get('_infestation_v1', 0) : 0;
+    _infestation = parseFloat(saved) || 0;
+    reconcileRoaches();
+    updateInfestationBar();
+  };
+
+  function saveInf(){
+    if(typeof S !== 'undefined' && window._supaUser){
+      S.set('_infestation_v1', _infestation);
+    }
+  }
+
+  // Roach count target = floor(infestation / 10), capped at 20 rendered max
+  // Infestation number itself stays uncapped — more bad days = worse when recovering
+  const MAX_ROACHES = 20;
+  function targetRoachCount(){ return Math.min(MAX_ROACHES, Math.floor(_infestation / 10)); }
+
+  function lerpF(a,b,t){ return a+(b-a)*t; }
+  function angleDiff(a,b){ let d=b-a; while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2; return d; }
+
+  class Roach {
+    constructor(){
+      const edge = Math.floor(Math.random()*4);
+      if(edge===0){this.x=Math.random()*RW;this.y=-15;}
+      else if(edge===1){this.x=RW+15;this.y=Math.random()*RH;}
+      else if(edge===2){this.x=Math.random()*RW;this.y=RH+15;}
+      else{this.x=-15;this.y=Math.random()*RH;}
+      this.angle = Math.atan2(RH/2-this.y, RW/2-this.x) + (Math.random()-0.5)*1.2;
+      this.targetAngle = this.angle;
+      this.wpX = Math.random()*RW;
+      this.wpY = Math.random()*RH;
+      this.wpTimer = 0;
+      this.speed = 2.4 + Math.random()*0.8;
+      this.scale = 0.50 + Math.random()*0.20;
+      this.legPhase = Math.random()*Math.PI*2;
+      this.antPhase = Math.random()*Math.PI*2;
+      this.opacity = 0;
+      this.stopped = false; this.stopTimer = 0;
+      this.scurrying = false; this.scurryTimer = 0; this.scurryCd = 180+Math.random()*220;
+    }
+    update(){
+      if(this.opacity<1) this.opacity = Math.min(1, this.opacity+0.022);
+      if(this.stopped){ this.stopTimer--; if(this.stopTimer<=0)this.stopped=false; this.legPhase+=0.03; this.antPhase+=0.02; return; }
+      if(Math.random()<0.0006){ this.stopped=true; this.stopTimer=60+Math.random()*80; }
+      // Scurry burst
+      this.scurryCd--;
+      if(this.scurryCd<=0&&!this.scurrying){ this.scurrying=true; this.scurryTimer=18+Math.random()*25; this.scurryCd=180+Math.random()*220; this.wpX=Math.random()*RW; this.wpY=Math.random()*RH; }
+      if(this.scurrying){ this.scurryTimer--; if(this.scurryTimer<=0)this.scurrying=false; }
+      // Waypoint navigation — full screen roaming
+      const dxW=this.wpX-this.x, dyW=this.wpY-this.y;
+      const distW=Math.sqrt(dxW*dxW+dyW*dyW);
+      this.wpTimer++;
+      if(distW<25||this.wpTimer>400){ this.wpX=Math.random()*RW; this.wpY=Math.random()*RH; this.wpTimer=0; }
+      const desired = Math.atan2(dyW,dxW);
+      const diff = angleDiff(this.angle, desired);
+      const maxTurn = this.scurrying ? 0.09 : 0.028;
+      this.angle += Math.sign(diff)*Math.min(Math.abs(diff),maxTurn);
+      const spd = this.scurrying ? this.speed*2.0 : this.speed;
+      this.x += Math.cos(this.angle)*spd;
+      this.y += Math.sin(this.angle)*spd;
+      // Snake-style wrap — body half visible on one side, other half on other side
+      if(this.x < -30) this.x = RW + 30;
+      else if(this.x > RW + 30) this.x = -30;
+      if(this.y < -30) this.y = RH + 30;
+      else if(this.y > RH + 30) this.y = -30;
+      this.legPhase += this.scurrying?0.70:0.32;
+      this.antPhase += 0.044;
+    }
+    draw(){
+      rctx.save();
+      rctx.globalAlpha = this.opacity * 0.88;
+      rctx.translate(this.x, this.y);
+      rctx.rotate(this.angle + Math.PI/2);
+      rctx.scale(this.scale, this.scale);
+      this._body();
+      rctx.restore();
+    }
+    _body(){
+      const t=this.legPhase, moving=!this.stopped;
+      const wiggle=moving?Math.sin(t*2)*0.022:0;
+      const legYs=[-14,-1,11];
+      for(let side=0;side<2;side++){
+        const sx=side===0?-1:1;
+        for(let i=0;i<3;i++){
+          const phase=t+(i%2===0?0:Math.PI)+(side*Math.PI);
+          const swing=moving?Math.sin(phase)*0.38:0;
+          const ba=sx*(Math.PI/2+swing);
+          const ly=legYs[i];
+          const x1=sx*5,y1=ly;
+          const x2=x1+Math.cos(ba-Math.PI/2)*9,y2=y1+Math.sin(ba-Math.PI/2)*9;
+          const kA=ba-Math.PI/2+sx*0.65;
+          const x3=x2+Math.cos(kA)*10,y3=y2+Math.sin(kA)*10;
+          const tA=kA+sx*0.5;
+          const x4=x3+Math.cos(tA)*5,y4=y3+Math.sin(tA)*5;
+          rctx.beginPath(); rctx.moveTo(x1,y1); rctx.lineTo(x2,y2); rctx.lineTo(x3,y3); rctx.lineTo(x4,y4);
+          rctx.strokeStyle='#2e1a08'; rctx.lineWidth=1.3; rctx.lineCap='round'; rctx.stroke();
+          for(let h=0;h<2;h++){
+            const p=0.3+h*0.35;
+            const hx=lerpF(x2,x3,p),hy=lerpF(y2,y3,p);
+            rctx.beginPath(); rctx.moveTo(hx,hy); rctx.lineTo(hx+sx*2.2,hy-1.8);
+            rctx.strokeStyle='rgba(38,18,4,0.6)'; rctx.lineWidth=0.5; rctx.stroke();
+          }
+        }
+      }
+      // Abdomen
+      rctx.beginPath(); rctx.ellipse(0,10,7.5,14,wiggle,0,Math.PI*2);
+      rctx.fillStyle='#3a1e08'; rctx.fill();
+      rctx.strokeStyle='rgba(0,0,0,0.5)'; rctx.lineWidth=0.8;
+      for(let i=0;i<5;i++){rctx.beginPath();rctx.moveTo(-6.5,i*5);rctx.quadraticCurveTo(0,1+i*5,6.5,i*5);rctx.stroke();}
+      rctx.beginPath();rctx.moveTo(0,-3);rctx.lineTo(0,22);rctx.strokeStyle='rgba(0,0,0,0.35)';rctx.lineWidth=0.6;rctx.stroke();
+      // Thorax
+      rctx.beginPath();rctx.ellipse(0,-7,5.5,7.5,wiggle*0.5,0,Math.PI*2);
+      rctx.fillStyle='#3d200a'; rctx.fill();
+      // Pronotum
+      rctx.beginPath();rctx.ellipse(0,-10,7,9,wiggle*0.3,0,Math.PI*2);
+      rctx.fillStyle='#4a2c0e'; rctx.fill();
+      rctx.beginPath();rctx.ellipse(0,-10,7,9,0,0,Math.PI*2);
+      rctx.strokeStyle='rgba(0,0,0,0.4)';rctx.lineWidth=0.6;rctx.stroke();
+      // Head
+      rctx.beginPath();rctx.ellipse(0,-20,4.5,5,wiggle*0.3,0,Math.PI*2);
+      rctx.fillStyle='#1e0c04';rctx.fill();
+      for(const ex of[-2.5,2.5]){
+        rctx.beginPath();rctx.ellipse(ex,-21,2,2.5,ex<0?-0.3:0.3,0,Math.PI*2);
+        rctx.fillStyle='#0d0504';rctx.fill();
+        rctx.beginPath();rctx.arc(ex-0.4*Math.sign(ex),-21.8,0.45,0,Math.PI*2);
+        rctx.fillStyle='rgba(255,200,150,0.18)';rctx.fill();
+      }
+      // Antennae
+      const ap=this.antPhase;
+      for(const sx of[-1,1]){
+        const ax=sx*2.5,ay=-25;
+        const c1x=ax+sx*(9+Math.sin(ap+sx)*4.5),c1y=ay-15+Math.cos(ap)*3.5;
+        const ex2=ax+sx*(17+Math.sin(ap*0.7)*5.5),ey2=ay-27+Math.sin(ap*1.2)*4.5;
+        rctx.beginPath();rctx.moveTo(ax,ay);rctx.quadraticCurveTo(c1x,c1y,ex2,ey2);
+        rctx.strokeStyle='#3a1e08';rctx.lineWidth=0.85;rctx.lineCap='round';rctx.stroke();
+        rctx.beginPath();rctx.arc(c1x,c1y,0.6,0,Math.PI*2);rctx.fillStyle='#3a1e08';rctx.fill();
+      }
+    }
+  }
+
+  // Reconcile roach array with target count
+  function reconcileRoaches(){
+    const target = targetRoachCount();
+    if(_roaches.length < target){
+      const toAdd = target - _roaches.length;
+      for(let i=0;i<toAdd;i++) _roaches.push(new Roach());
+    } else if(_roaches.length > target){
+      _roaches = _roaches.slice(_roaches.length - target);
+    }
+  }
+
+  // Render loop
+  let _lastT=0;
+  function loop(ts){
+    requestAnimationFrame(loop);
+    if(ts-_lastT<16)return;
+    _lastT=ts;
+    rctx.clearRect(0,0,RW,RH);
+    for(let i=0;i<_roaches.length;i++){_roaches[i].update();_roaches[i].draw();}
+  }
+  requestAnimationFrame(loop);
+
+  // Update infestation bar UI
+  function updateInfestationBar(){
+    const fill = document.getElementById('infestation-fill');
+    if(!fill) return;
+    const displayPct = Math.min(_infestation, 100);
+    const overloaded = _infestation > 100;
+    fill.style.width = displayPct + '%';
+    fill.style.background = overloaded ? '#ff00ff' : _infestation<20?'#ffa502':_infestation<50?'#ff6348':'#e03030';
+    // Update number display
+    const numEl = document.getElementById('infestation-number');
+    if(numEl){
+      numEl.textContent = Math.round(_infestation);
+      numEl.style.color = overloaded ? '#ff00ff' : _infestation<20?'#ffa502':_infestation<50?'#ff6348':'#e03030';
+    }
+    // Update roach count
+    const roachEl = document.getElementById('roach-count-display');
+    if(roachEl) roachEl.textContent = targetRoachCount();
+  }
+
+  // ── PUBLIC: called from runAuditAndLog after raw score computed ──
+  // rawScore = ts value from runAudit (0–150 scale), we normalize to 0–100
+  window._updateInfestation = function(rawScore){
+    // Normalize: raw max is ~150, treat 70+ as safe (maps to 0-100 range)
+    // We use the raw score directly on 0-100 scale (clamped)
+    // rawScore is on 0-150 scale (same as audit engine)
+    // Safe threshold: 70+ on this scale
+    const r = Math.round(rawScore); // no clamp — can be 0-150+
+
+    if(r >= 70){
+      // Safe zone — reduction scales aggressively with score
+      // r=70 → -8, r=100 → -41, r=130 → -74, r=150 → -96
+      const reduction = Math.round((r - 70) * 1.1 + 8);
+      _infestation = Math.max(0, _infestation - reduction);
+    } else {
+      // Bad zone — scale by how bad
+      const badness = 70 - r; // 0–70
+      let delta;
+      if(r >= 60){
+        // 60-69: very mild, tiny random chance only
+        delta = Math.random() < (badness / 70) * 0.25 ? 1 : 0;
+      } else if(r >= 50){
+        delta = Math.round(badness * 0.08 * (1 + _infestation/200));
+      } else if(r >= 40){
+        delta = Math.round(badness * 0.18 * (1 + _infestation/150));
+      } else if(r >= 30){
+        delta = Math.round(badness * 0.30 * (1 + _infestation/120));
+      } else if(r >= 20){
+        delta = Math.round(badness * 0.42 * (1 + _infestation/100));
+      } else if(r >= 10){
+        delta = Math.round(badness * 0.55 * (1 + _infestation/80));
+      } else {
+        delta = Math.round(badness * 0.70 * (1 + _infestation/60));
+      }
+      // No hard cap — can exceed 100
+      _infestation = _infestation + delta;
+    }
+
+    saveInf();
+    reconcileRoaches();
+    updateInfestationBar();
+  };
+
+  // Init on load
+  reconcileRoaches();
+  updateInfestationBar();
+
+  // Expose for debug
+  window._getInfestation = function(){ return _infestation; };
+  window._resetInfestation = function(){ _infestation=0; _roaches=[]; saveInf(); reconcileRoaches(); updateInfestationBar(); };
+  // Also expose sync for external call
+  window._getInfestationRaw = function(){ return _infestation; };
+})();
+</script>
+
 </body>
 </html>
