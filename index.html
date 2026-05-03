@@ -5584,6 +5584,8 @@ function colRevealNext() {
   // ── Boot: show home screen and render initial UI ──
   updateUI();
   goto('home');
+  // Sync infestation from Supabase now that auth + S are fully ready
+  if(typeof window._syncInfestationFromSupabase === 'function') window._syncInfestationFromSupabase();
 } // end _bootApp
 
 // ── Auth state watcher ──
@@ -6375,18 +6377,13 @@ window.thmDeleteOwned=thmDeleteOwned;
   // Called after S is populated — load from Supabase, fall back to localStorage
   window._syncInfestationFromSupabase = function(){
     let saved = 0;
-    try { if(typeof S !== 'undefined'){ const sv=S.get('_infestation_v1',null); if(sv!==null) saved=sv; } } catch(e){}
-    if(!saved) saved = parseFloat(localStorage.getItem('_infestation_v1') || '0');
-    _infestation = parseFloat(saved) || 0;
+    try { if(typeof S !== 'undefined'){ const sv=S.get('_infestation_v1',null); if(sv!==null && sv!==undefined) saved=sv; } } catch(e){}
+    _infestation = Math.max(0, parseFloat(saved) || 0);
     reconcileRoaches();
     updateInfestationBar();
   };
 
-  // Load from localStorage immediately on startup (before Supabase resolves)
-  _infestation = parseFloat(localStorage.getItem('_infestation_v1') || '0');
-
   function saveInf(){
-    localStorage.setItem('_infestation_v1', String(_infestation));
     try { if(typeof S !== 'undefined') S.set('_infestation_v1', _infestation); } catch(e){}
   }
 
@@ -6611,7 +6608,7 @@ window.thmDeleteOwned=thmDeleteOwned;
 
   // Expose for debug
   window._getInfestation = function(){ return _infestation; };
-  window._resetInfestation = function(){ _infestation=0; _roaches=[]; saveInf(); reconcileRoaches(); updateInfestationBar(); localStorage.removeItem('_infestation_v1'); };
+  window._resetInfestation = function(){ _infestation=0; _roaches=[]; saveInf(); reconcileRoaches(); updateInfestationBar(); };
   // Also expose sync for external call
   window._getInfestationRaw = function(){ return _infestation; };
 })();
