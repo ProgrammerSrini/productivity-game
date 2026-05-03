@@ -877,6 +877,33 @@ select{-webkit-appearance:none;appearance:none;}
           </div>
         </label>
       </div>
+      <!-- Advanced bg pickers -->
+      <div style="margin-bottom:10px;">
+        <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'grid':'none';this.textContent=this.nextElementSibling.style.display==='none'?'▶ ADVANCED (BG LAYERS)':'▼ ADVANCED (BG LAYERS)'" style="background:none;border:none;color:var(--gray);font-size:12px;letter-spacing:1px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;padding:0;margin-bottom:6px;">▼ ADVANCED (BG LAYERS)</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <label style="display:flex;flex-direction:column;gap:5px;">
+            <span style="font-size:11px;color:var(--gray);letter-spacing:.5px;">BG2 (CARDS)</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="color" id="thm-pick-bg2" value="#141418" style="width:44px;height:34px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+              <span id="thm-label-bg2" style="font-size:11px;color:var(--gray);">#141418</span>
+            </div>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px;">
+            <span style="font-size:11px;color:var(--gray);letter-spacing:.5px;">BG3 (INPUTS)</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="color" id="thm-pick-bg3" value="#1a1a20" style="width:44px;height:34px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+              <span id="thm-label-bg3" style="font-size:11px;color:var(--gray);">#1a1a20</span>
+            </div>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px;">
+            <span style="font-size:11px;color:var(--gray);letter-spacing:.5px;">BG4 (DEEP)</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="color" id="thm-pick-bg4" value="#202028" style="width:44px;height:34px;border:none;border-radius:6px;cursor:pointer;background:transparent;">
+              <span id="thm-label-bg4" style="font-size:11px;color:var(--gray);">#202028</span>
+            </div>
+          </label>
+        </div>
+      </div>
       <!-- Live preview -->
       <div id="thm-preview-strip" style="border-radius:8px;padding:12px;margin-bottom:14px;border:1px solid var(--border);background:var(--bg4);">
         <div style="font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:2px;margin-bottom:6px;" id="thm-prev-title">PREVIEW</div>
@@ -1817,32 +1844,63 @@ function updateUI(){
   const bd=document.getElementById('badge-disp');
   if(eb){bd.textContent=eb.emoji+' '+eb.name;bd.style.color=eb.color;}
   else{bd.textContent='No Badge Equipped';bd.style.color='#444';}
-  // Hero BG tint + Alpha/Omega watermark
+  // ── HERO PREFERENCE: S-tier > Badge > Theme ──────────────────
+  // S-tier and Badge are INDEPENDENT of each other and of theme.
+  // S-tier: always rainbow gradient, never affected by badge or theme bg.
+  // Badge: standalone color tint, not mixed with theme.
+  // Theme: only affects hero when NO badge equipped AND NOT S-tier.
+  // Alpha/Omega watermark: shown in S-tier (just emoji, no badge color),
+  //   AND shown in non-S-tier when those badges are equipped (with badge color).
   const hero=document.getElementById('home-hero');
   const wm=document.getElementById('hero-wm');
-  // S-tier: rainbow hero class, ignore badge bg
+
   if(tier.t==='S'){
+    // S-tier takes full control of hero background — rainbow gradient always
     hero.classList.add('s-tier-hero');
     hero.style.background='';
     hero.style.borderColor='';
+    // Watermark: show Alpha/Omega emoji if equipped, but NO badge color influence
+    if(wm){
+      if(eb&&(eb.id==='alpha'||eb.id==='omega')){
+        wm.textContent=eb.emoji;
+        wm.style.opacity='0.12';
+        wm.style.textShadow='0 0 80px rgba(255,255,255,0.3)'; // neutral white glow, not badge color
+      } else {
+        wm.style.opacity='0';
+        setTimeout(()=>{if(wm.style.opacity==='0')wm.textContent='';},500);
+      }
+    }
   } else {
     hero.classList.remove('s-tier-hero');
     if(eb){
+      // Badge equipped — badge sets hero tint, independent of theme
       const r=parseInt(eb.color.slice(1,3),16),g=parseInt(eb.color.slice(3,5),16),b=parseInt(eb.color.slice(5,7),16);
       hero.style.background=`linear-gradient(135deg,#0a0a13 0%,rgba(${r},${g},${b},0.22) 50%,#0a0a13 100%)`;
       hero.style.borderColor=`rgba(${r},${g},${b},0.50)`;
+      // Watermark: Alpha/Omega badge shows emoji with badge color
+      if(wm){
+        if(eb.id==='alpha'||eb.id==='omega'){
+          wm.textContent=eb.emoji;
+          wm.style.opacity='0.10';
+          wm.style.textShadow=`0 0 80px rgba(${r},${g},${b},0.7)`;
+        } else {
+          wm.style.opacity='0';
+          setTimeout(()=>{if(wm.style.opacity==='0')wm.textContent='';},500);
+        }
+      }
     } else {
-      hero.style.background='linear-gradient(135deg,#0f0f1e 0%,#1a1040 50%,#0f0f1e 100%)';
-      hero.style.borderColor='var(--purple)';
-    }
-  }
-  if(wm){
-    if(eb&&(eb.id==='alpha'||eb.id==='omega')){
-      const r=parseInt(eb.color.slice(1,3),16),g=parseInt(eb.color.slice(3,5),16),b=parseInt(eb.color.slice(5,7),16);
-      wm.textContent=eb.emoji;wm.style.opacity='0.10';
-      wm.style.textShadow=`0 0 80px rgba(${r},${g},${b},0.7)`;
-    } else {
-      wm.style.opacity='0';setTimeout(()=>{if(wm.style.opacity==='0')wm.textContent='';},500);
+      // No badge — theme affects hero using the active theme's primary color
+      const activeThm=(typeof _thmGetActive==='function'&&window._appS)?_thmGetActive():null;
+      const themePrimary=activeThm?(activeThm.primary||activeThm.accent):null;
+      const tPrimary=themePrimary||getComputedStyle(document.documentElement).getPropertyValue('--purple').trim()||'#6c5ce7';
+      let tr=128,tg=128,tb=128;
+      try{tr=parseInt(tPrimary.replace('#','').slice(0,2),16);tg=parseInt(tPrimary.replace('#','').slice(2,4),16);tb=parseInt(tPrimary.replace('#','').slice(4,6),16);}catch(e){}
+      hero.style.background=`linear-gradient(135deg,var(--bg) 0%,rgba(${tr},${tg},${tb},0.18) 50%,var(--bg) 100%)`;
+      hero.style.borderColor=`rgba(${tr},${tg},${tb},0.45)`;
+      if(wm){
+        wm.style.opacity='0';
+        setTimeout(()=>{if(wm.style.opacity==='0')wm.textContent='';},500);
+      }
     }
   }
   // Big badge showcase — Alpha & Omega get reduced emoji size
@@ -1896,7 +1954,8 @@ function renderWeeklyChart() {
     d.setDate(startOfWeek.getDate() + i);
     weekDates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
   }
-  const xpVals = weekDates.map(d => (weekly_data[d] || {}).xp || 0);
+  const todayD = todayStr();
+  const xpVals = weekDates.map(d => d === todayD ? (state.daily_xp || (weekly_data[d] || {}).xp || 0) : (weekly_data[d] || {}).xp || 0);
   const maxXP = Math.max(...xpVals, 1);
   const CHART_H = 44;
   el.innerHTML = weekDates.map((d, i) => {
@@ -5891,13 +5950,13 @@ const THM_PRESETS = [
   // WHITE MODE — light background, dark text, everything inverted properly
   {id:'white', name:'WHITE MODE',
     primary:'#5b4fcf', accent:'#00a87a', bg:'#ffffff', text:'#111122',
-    bg2:'#f5f5f5', bg3:'#eeeeee', bg4:'#e8e8e8', border:'#d0d0d8',
+    bg2:'#fafafa', bg3:'#ffffff', bg4:'#f0f0f5', border:'#e0e0e8',
     gray:'#666688', yellow:'#b08800', red:'#cc2222', orange:'#cc5500', blue:'#2266cc',
   },
   // DARK MODE — pure black, high contrast
   {id:'dark', name:'DARK MODE',
     primary:'#9988ff', accent:'#44ddcc', bg:'#000000', text:'#f0f0ff',
-    bg2:'#080808', bg3:'#101010', bg4:'#181818', border:'#2a2a2a',
+    bg2:'#080808', bg3:'#000000', bg4:'#181818', border:'#2a2a2a',
     gray:'#777799', yellow:'#ffdd44', red:'#ff4444', orange:'#ff8844', blue:'#66aaff',
   },
 ];
@@ -5930,15 +5989,19 @@ function _thmApplyFull(t){
 }
 
 // For custom (picker-based) themes without full var set — derive from 4 pickers
-function _thmApplyFromPickers(primary,accent,bg,text){
+function _thmApplyFromPickers(primary,accent,bg,text,bg2,bg3,bg4){
   // Determine if light or dark background
   const isLight=_thmPerceivedBrightness(bg)>128;
   const r=document.documentElement;
   const s=(hex,a)=>_thmShade(hex,a,isLight);
   r.style.setProperty('--bg',     bg);
-  r.style.setProperty('--bg2',    s(bg, isLight?.08:.12));
-  r.style.setProperty('--bg3',    s(bg, isLight?.16:.25));
-  r.style.setProperty('--bg4',    s(bg, isLight?.24:.38));
+  // Use manual bg2/3/4 if provided, otherwise derive
+  const _bg2=bg2||s(bg, isLight?.03:.12);
+  const _bg3=bg3||s(bg, isLight?.06:.25);
+  const _bg4=bg4||s(bg, isLight?.10:.38);
+  r.style.setProperty('--bg2',    _bg2);
+  r.style.setProperty('--bg3',    _bg3);
+  r.style.setProperty('--bg4',    _bg4);
   // Border: blend bg toward primary (35%) so it picks up the theme hue,
   // then lighten (dark themes) or darken (light themes) so it's always visible against bg3/bg4.
   const borderTinted=_thmBlendHex(bg,primary,.35);
@@ -5951,7 +6014,7 @@ function _thmApplyFromPickers(primary,accent,bg,text){
   r.style.setProperty('--red',    isLight?'#cc2222':'#ff3838');
   r.style.setProperty('--orange', isLight?'#cc5500':'#ffa502');
   r.style.setProperty('--blue',   isLight?'#2266cc':'#74b9ff');
-  r.style.setProperty('--nav-bg', s(bg, isLight?.10:.15));
+  r.style.setProperty('--nav-bg', _bg2);
   r.style.setProperty('--scanline-color', isLight?'transparent':'rgba(0,0,0,.03)');
 }
 
@@ -5985,9 +6048,11 @@ function thmBootLoad(){
     document.documentElement.style.cssText='';
     return;
   }
-  // If it's a full preset (has bg2), apply full; otherwise from pickers
-  if(t.bg2){_thmApplyFull(t);}
-  else if(t.primary&&t.accent&&t.bg&&(t.text||t.white)){_thmApplyFromPickers(t.primary,t.accent,t.bg,t.text||t.white);}
+  // If saved theme matches a preset id, always use fresh preset definition (avoids stale stored values)
+  const freshPreset=t.id?THM_PRESETS.find(p=>p.id===t.id):null;
+  const toApply=freshPreset||t;
+  if(toApply.bg2){_thmApplyFull(toApply);}
+  else if(toApply.primary&&toApply.accent&&toApply.bg&&(toApply.text||toApply.white)){_thmApplyFromPickers(toApply.primary,toApply.accent,toApply.bg,toApply.text||toApply.white);}
 }
 thmBootLoad();
 
@@ -5998,17 +6063,26 @@ function _thmPickerVals(){
     accent: (document.getElementById('thm-pick-accent') ||{}).value||THM_DEFAULT.accent,
     bg:     (document.getElementById('thm-pick-bg')     ||{}).value||THM_DEFAULT.bg,
     text:   (document.getElementById('thm-pick-text')   ||{}).value||THM_DEFAULT.white,
+    bg2:    (document.getElementById('thm-pick-bg2')    ||{}).value||null,
+    bg3:    (document.getElementById('thm-pick-bg3')    ||{}).value||null,
+    bg4:    (document.getElementById('thm-pick-bg4')    ||{}).value||null,
   };
 }
 
 // Check if two theme objects are equal on the 4 picker fields
 function _thmEqual(a,b){
-  return a.primary===b.primary && a.accent===b.accent && a.bg===b.bg && a.text===b.text;
+  return a.primary===b.primary && a.accent===b.accent && a.bg===b.bg && a.text===b.text
+    && (a.bg2||null)===(b.bg2||null) && (a.bg3||null)===(b.bg3||null) && (a.bg4||null)===(b.bg4||null);
 }
 // Compare picker vals to default
 function _thmIsDefault(v){
+  const defBg2=THM_DEFAULT.bg2, defBg3=THM_DEFAULT.bg3, defBg4=THM_DEFAULT.bg4;
+  const bg2Match=!v.bg2||v.bg2===defBg2;
+  const bg3Match=!v.bg3||v.bg3===defBg3;
+  const bg4Match=!v.bg4||v.bg4===defBg4;
   return v.primary===THM_DEFAULT.primary && v.accent===THM_DEFAULT.accent &&
-         v.bg===THM_DEFAULT.bg && v.text===THM_DEFAULT.white;
+         v.bg===THM_DEFAULT.bg && v.text===THM_DEFAULT.white
+    && bg2Match && bg3Match && bg4Match;
 }
 
 // Update live preview strip from current pickers
@@ -6034,11 +6108,13 @@ function _thmLivePreview(){
 function _thmWirePickers(){
   if(window._thmPickersWired)return;
   window._thmPickersWired=true;
-  ['primary','accent','bg','text'].forEach(key=>{
+  ['primary','accent','bg','text','bg2','bg3','bg4'].forEach(key=>{
     const inp=document.getElementById('thm-pick-'+key);
     const lbl=document.getElementById('thm-label-'+key);
     if(!inp)return;
-    inp.addEventListener('input',()=>{if(lbl)lbl.textContent=inp.value;_thmLivePreview();const v=_thmPickerVals();_thmApplyFromPickers(v.primary,v.accent,v.bg,v.text);window._thmPreviewActive=true;});
+    const _thmPickerHandler=()=>{if(window._thmLoadingPreset)return;if(lbl)lbl.textContent=inp.value;_thmLivePreview();const v=_thmPickerVals();_thmApplyFromPickers(v.primary,v.accent,v.bg,v.text,v.bg2,v.bg3,v.bg4);window._thmPreviewActive=true;};
+    inp.addEventListener('input',_thmPickerHandler);
+    inp.addEventListener('change',_thmPickerHandler);
   });
 }
 
@@ -6098,8 +6174,11 @@ function thmReset(){
 // Load a preset into pickers (does NOT apply yet — user must hit Apply or Buy)
 function thmLoadPreset(id){
   const p=THM_PRESETS.find(x=>x.id===id);if(!p)return;
-  const setV=(k,val)=>{const i=document.getElementById('thm-pick-'+k);const l=document.getElementById('thm-label-'+k);if(i)i.value=val;if(l)l.textContent=val;};
+  window._thmLoadingPreset=true;
+  const setV=(k,val)=>{if(!val)return;const i=document.getElementById('thm-pick-'+k);const l=document.getElementById('thm-label-'+k);if(i)i.value=val;if(l)l.textContent=val;};
   setV('primary',p.primary);setV('accent',p.accent);setV('bg',p.bg);setV('text',p.text);
+  setV('bg2',p.bg2);setV('bg3',p.bg3);setV('bg4',p.bg4);
+  window._thmLoadingPreset=false;
   _thmLivePreview();
   // Auto-apply preset immediately so user can see it live
   if(p.free||p.id==='default'){
@@ -6111,8 +6190,9 @@ function thmLoadPreset(id){
     const owned=_thmGetOwned();
     const alreadyOwned=owned.find(o=>_thmEqual({primary:p.primary,accent:p.accent,bg:p.bg,text:p.text},o));
     if(alreadyOwned){
-      _thmApplyFull(p);
-      _thmSetActive(p);
+      const freshP=THM_PRESETS.find(x=>x.id===p.id)||p;
+      _thmApplyFull(freshP);
+      _thmSetActive(freshP);
       toast('🎨 '+p.name+' applied (owned)!');
       window._thmPreviewActive=false;
     } else {
@@ -6146,7 +6226,7 @@ function thmBuy(){
         const presetMatch=THM_PRESETS.find(p=>_thmEqual(v,p));
         const entry=presetMatch
           ? {...presetMatch,name,boughtAt:window._appTodayStr()}
-          : {name,primary:v.primary,accent:v.accent,bg:v.bg,text:v.text,boughtAt:window._appTodayStr()};
+          : {name,primary:v.primary,accent:v.accent,bg:v.bg,text:v.text,white:v.text,bg2:v.bg2||null,bg3:v.bg3||null,bg4:v.bg4||null,boughtAt:window._appTodayStr()};
         arr.push(entry);
         _thmSetOwned(arr);
         // Apply and persist as active theme
@@ -6209,7 +6289,8 @@ function thmRenderOwned(){
         `<div style="font-size:14px;font-weight:700;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.name}</div>`+
         `<div style="font-size:12px;color:var(--gray);margin-top:1px;">${t.boughtAt||''} · ${t.primary}</div>`+
       `</div>`+
-      `<button onclick="thmApplyOwned(${i})" style="background:var(--purple);border:none;border-radius:6px;color:#fff;padding:6px 14px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;flex-shrink:0;">APPLY</button>`;
+      `<button onclick="thmApplyOwned(${i})" style="background:var(--purple);border:none;border-radius:6px;color:#fff;padding:6px 14px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;flex-shrink:0;">APPLY</button>`+
+      `<button onclick="thmDeleteOwned(${i})" style="background:transparent;border:1px solid var(--red);border-radius:6px;color:var(--red);padding:6px 10px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;flex-shrink:0;" title="Delete theme">🗑</button>`;
     list.appendChild(row);
   });
 }
@@ -6220,17 +6301,53 @@ function thmApplyOwned(i){
   const t=owned[i];if(!t)return;
   const setV=(k,val)=>{const inp=document.getElementById('thm-pick-'+k);const lbl=document.getElementById('thm-label-'+k);if(inp&&val)inp.value=val;if(lbl&&val)lbl.textContent=val;};
   setV('primary',t.primary);setV('accent',t.accent);setV('bg',t.bg);setV('text',t.text||t.white);
+  setV('bg2',t.bg2);setV('bg3',t.bg3);setV('bg4',t.bg4);
   if(t.bg2){_thmApplyFull(t);}
-  else{_thmApplyFromPickers(t.primary,t.accent,t.bg,t.text||t.white);}
+  else{_thmApplyFromPickers(t.primary,t.accent,t.bg,t.text||t.white,t.bg2,t.bg3,t.bg4);}
   _thmSetActive(t);
   _thmLivePreview();
   toast('🎨 "'+t.name+'" applied!');
+}
+
+function thmDeleteOwned(i){
+  const owned=_thmGetOwned();
+  const t=owned[i];if(!t)return;
+  showModal('🗑 DELETE THEME',
+    `<div style="font-size:15px;color:var(--gray);">Delete <strong style="color:var(--white);">${t.name}</strong>? This cannot be undone.</div>`,
+    [
+      {txt:'DELETE',cls:'btn-red',fn:()=>{
+        const arr=_thmGetOwned();
+        const active=_thmGetActive();
+        // If deleting the currently active theme, apply default
+        const isActive=active&&active.name===t.name&&active.primary===t.primary&&active.bg===t.bg&&active.accent===t.accent;
+        arr.splice(i,1);
+        _thmSetOwned(arr);
+        if(isActive){
+          _thmSetActive(null);
+          _thmApplyFull(THM_DEFAULT);
+          // Reset pickers to default values
+          const setV=(k,val)=>{const inp=document.getElementById('thm-pick-'+k);const lbl=document.getElementById('thm-label-'+k);if(inp)inp.value=val;if(lbl)lbl.textContent=val;};
+          setV('primary',THM_DEFAULT.primary);setV('accent',THM_DEFAULT.accent);
+          setV('bg',THM_DEFAULT.bg);setV('text',THM_DEFAULT.white);
+          setV('bg2',THM_DEFAULT.bg2);setV('bg3',THM_DEFAULT.bg3);setV('bg4',THM_DEFAULT.bg4);
+          toast('🗑 "'+t.name+'" deleted — reverted to Default');
+        } else {
+          toast('🗑 "'+t.name+'" deleted');
+        }
+        thmRenderOwned();
+        thmUpdateBuyBtn();
+        closeModal();
+      }},
+      {txt:'Cancel',cls:'btn-gray',fn:closeModal},
+    ]
+  );
 }
 
 window.thmReset=thmReset;
 window.thmBuy=thmBuy;
 window.thmApplyOwned=thmApplyOwned;
 window.thmLoadPreset=thmLoadPreset;
+window.thmDeleteOwned=thmDeleteOwned;
 // ═══════════════════════════════════════════
 // END THEME SHOP
 // ═══════════════════════════════════════════
@@ -6255,23 +6372,27 @@ window.thmLoadPreset=thmLoadPreset;
   let _infestation = 0;
   let _roaches = [];
 
-  // Called from _bootApp after S is populated
+  // Called after S is populated — load from Supabase, fall back to localStorage
   window._syncInfestationFromSupabase = function(){
-    const saved = (typeof S !== 'undefined') ? S.get('_infestation_v1', 0) : 0;
+    let saved = 0;
+    try { if(typeof S !== 'undefined'){ const sv=S.get('_infestation_v1',null); if(sv!==null) saved=sv; } } catch(e){}
+    if(!saved) saved = parseFloat(localStorage.getItem('_infestation_v1') || '0');
     _infestation = parseFloat(saved) || 0;
     reconcileRoaches();
     updateInfestationBar();
   };
 
+  // Load from localStorage immediately on startup (before Supabase resolves)
+  _infestation = parseFloat(localStorage.getItem('_infestation_v1') || '0');
+
   function saveInf(){
-    if(typeof S !== 'undefined' && window._supaUser){
-      S.set('_infestation_v1', _infestation);
-    }
+    localStorage.setItem('_infestation_v1', String(_infestation));
+    try { if(typeof S !== 'undefined') S.set('_infestation_v1', _infestation); } catch(e){}
   }
 
   // Roach count target = floor(infestation / 10), capped at 20 rendered max
   // Infestation number itself stays uncapped — more bad days = worse when recovering
-  const MAX_ROACHES = 20;
+  const MAX_ROACHES = 40;
   function targetRoachCount(){ return Math.min(MAX_ROACHES, Math.floor(_infestation / 10)); }
 
   function lerpF(a,b,t){ return a+(b-a)*t; }
@@ -6449,8 +6570,11 @@ window.thmLoadPreset=thmLoadPreset;
 
     if(r >= 70){
       // Safe zone — reduction scales aggressively with score
-      // r=70 → -8, r=100 → -41, r=130 → -74, r=150 → -96
-      const reduction = Math.round((r - 70) * 1.1 + 8);
+      // r=70 → -15, r=100 → -75, r=134 → -159, r=166 → -223
+      // Also % based component — clears faster when heavily infested
+      const flat = Math.round((r - 70) * 2.2 + 15);
+      const pct = Math.round(_infestation * 0.08); // 8% of current infestation
+      const reduction = flat + pct;
       _infestation = Math.max(0, _infestation - reduction);
     } else {
       // Bad zone — scale by how bad
@@ -6487,7 +6611,7 @@ window.thmLoadPreset=thmLoadPreset;
 
   // Expose for debug
   window._getInfestation = function(){ return _infestation; };
-  window._resetInfestation = function(){ _infestation=0; _roaches=[]; saveInf(); reconcileRoaches(); updateInfestationBar(); };
+  window._resetInfestation = function(){ _infestation=0; _roaches=[]; saveInf(); reconcileRoaches(); updateInfestationBar(); localStorage.removeItem('_infestation_v1'); };
   // Also expose sync for external call
   window._getInfestationRaw = function(){ return _infestation; };
 })();
