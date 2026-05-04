@@ -1523,7 +1523,7 @@ const weekKey=()=>{const d=new Date(),day=d.getDay()||7;d.setDate(d.getDate()-da
 // ═══════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════
-let state=S.get('state',{pointer:50,xp:0,daily_xp:0,yesterday_xp:0,last_reset:todayStr(),cash:0});
+let state=S.get('state',{pointer:50,xp:0,daily_xp:0,yesterday_xp:0,last_reset:todayStr(),cash:0,infestation:0});
 let missions_status=S.get('missions',{});
 let achievements=S.get('achievements',{});
 let gamble_data=S.get('gamble',{wins:0,losses:0,history:[],active_bet:null});
@@ -6376,24 +6376,13 @@ window.thmDeleteOwned=thmDeleteOwned;
 
   // Called after S is populated — load from Supabase, fall back to localStorage
   window._syncInfestationFromSupabase = function(){
-    let saved = 0;
-    try { if(typeof S !== 'undefined'){ const sv=S.get('_infestation_v1',null); if(sv!==null && sv!==undefined) saved=sv; } } catch(e){}
-    _infestation = Math.max(0, parseFloat(saved) || 0);
+    try { if(typeof S !== 'undefined'){ const st=S.get('state',{}); if(st.infestation!=null) _infestation=Math.max(0,parseFloat(st.infestation)||0); } } catch(e){}
     reconcileRoaches();
     updateInfestationBar();
   };
 
-  async function saveInf(){
-    try {
-      if(typeof S !== 'undefined') S.set('_infestation_v1', _infestation);
-      // Also write directly to Supabase immediately — don't rely on S.set's fire-and-forget
-      if(window._supaUser && typeof supa !== 'undefined'){
-        await supa.from('discipline_data').upsert(
-          {user_id: window._supaUser.id, key: '_infestation_v1', value: JSON.stringify(_infestation)},
-          {onConflict: 'user_id,key'}
-        );
-      }
-    } catch(e){ console.warn('saveInf failed:', e); }
+  function saveInf(){
+    try { if(typeof S !== 'undefined'){ const st=S.get('state',{}); st.infestation=_infestation; S.set('state',st); } } catch(e){}
   }
 
   // Roach count target = floor(infestation / 10), capped at 20 rendered max
@@ -6606,7 +6595,7 @@ window.thmDeleteOwned=thmDeleteOwned;
       _infestation = _infestation + delta;
     }
 
-    saveInf().then(()=>{ reconcileRoaches(); updateInfestationBar(); });
+    saveInf(); reconcileRoaches(); updateInfestationBar();
     reconcileRoaches();
     updateInfestationBar();
   };
