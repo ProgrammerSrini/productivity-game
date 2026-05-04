@@ -1524,6 +1524,8 @@ const weekKey=()=>{const d=new Date(),day=d.getDay()||7;d.setDate(d.getDate()-da
 // DATA
 // ═══════════════════════════════════════════
 let state=S.get('state',{pointer:50,xp:0,daily_xp:0,yesterday_xp:0,last_reset:todayStr(),cash:0,infestation:0});
+// Link infestation system to this state object — keeps infestation in sync so S.set('state',state) never clobbers it
+if(typeof window._linkInfestationState === 'function') window._linkInfestationState(state);
 let missions_status=S.get('missions',{});
 let achievements=S.get('achievements',{});
 let gamble_data=S.get('gamble',{wins:0,losses:0,history:[],active_bet:null});
@@ -6381,7 +6383,18 @@ window.thmDeleteOwned=thmDeleteOwned;
     updateInfestationBar();
   };
 
+  // Called by _bootApp after state is loaded, so we keep _infestation in sync with the state object
+  window._linkInfestationState = function(stateObj){
+    window._infestationStateRef = stateObj;
+    // Load infestation from state object (already loaded from Supabase by _bootApp)
+    if(stateObj.infestation != null) _infestation = Math.max(0, parseFloat(stateObj.infestation) || 0);
+    reconcileRoaches();
+    updateInfestationBar();
+  };
+
   function saveInf(){
+    // Keep the shared state object in sync so every S.set('state', state) call preserves infestation
+    try { if(window._infestationStateRef) window._infestationStateRef.infestation = _infestation; } catch(e){}
     try { if(typeof S !== 'undefined'){ const st=S.get('state',{}); st.infestation=_infestation; S.set('state',st); } } catch(e){}
   }
 
