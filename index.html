@@ -6383,8 +6383,17 @@ window.thmDeleteOwned=thmDeleteOwned;
     updateInfestationBar();
   };
 
-  function saveInf(){
-    try { if(typeof S !== 'undefined') S.set('_infestation_v1', _infestation); } catch(e){}
+  async function saveInf(){
+    try {
+      if(typeof S !== 'undefined') S.set('_infestation_v1', _infestation);
+      // Also write directly to Supabase immediately — don't rely on S.set's fire-and-forget
+      if(window._supaUser && typeof supa !== 'undefined'){
+        await supa.from('discipline_data').upsert(
+          {user_id: window._supaUser.id, key: '_infestation_v1', value: JSON.stringify(_infestation)},
+          {onConflict: 'user_id,key'}
+        );
+      }
+    } catch(e){ console.warn('saveInf failed:', e); }
   }
 
   // Roach count target = floor(infestation / 10), capped at 20 rendered max
@@ -6597,7 +6606,7 @@ window.thmDeleteOwned=thmDeleteOwned;
       _infestation = _infestation + delta;
     }
 
-    saveInf();
+    saveInf().then(()=>{ reconcileRoaches(); updateInfestationBar(); });
     reconcileRoaches();
     updateInfestationBar();
   };
