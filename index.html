@@ -6371,37 +6371,32 @@ window.thmDeleteOwned=thmDeleteOwned;
   function rsz(){ RW = rc.width = window.innerWidth; RH = rc.height = window.innerHeight; }
   rsz(); window.addEventListener('resize', rsz);
 
-  // Global infestation state — persisted in Supabase via S.get/S.set
-  // S may not be ready at IIFE time (runs before _bootApp), so we expose a sync function
-  let _infestation = 0;
   let _roaches = [];
 
-  // Called after S is populated — load from Supabase, fall back to localStorage
-  window._syncInfestationFromSupabase = function(){
-    try { if(typeof S !== 'undefined'){ const st=S.get('state',{}); if(st.infestation!=null) _infestation=Math.max(0,parseFloat(st.infestation)||0); } } catch(e){}
-    reconcileRoaches();
-    updateInfestationBar();
-  };
-
-  // Called by _bootApp after state is loaded, so we keep _infestation in sync with the state object
+  // Infestation lives directly on the state object (same as cash/xp).
+  // _bootApp calls window._linkInfestationState(state) once after loading state from Supabase.
+  // After that, reading/writing window._infState.infestation IS the save — no separate saveInf needed.
+  // Every S.set('state', state) call already persists it because it's the same object reference.
   window._linkInfestationState = function(stateObj){
-    window._infestationStateRef = stateObj;
-    // Load infestation from state object (already loaded from Supabase by _bootApp)
-    if(stateObj.infestation != null) _infestation = Math.max(0, parseFloat(stateObj.infestation) || 0);
+    window._infState = stateObj;
+    // Ensure the field exists for new users
+    if(stateObj.infestation == null) stateObj.infestation = 0;
     reconcileRoaches();
     updateInfestationBar();
   };
 
-  function saveInf(){
-    // Keep the shared state object in sync so every S.set('state', state) call preserves infestation
-    try { if(window._infestationStateRef) window._infestationStateRef.infestation = _infestation; } catch(e){}
-    try { if(typeof S !== 'undefined'){ const st=S.get('state',{}); st.infestation=_infestation; S.set('state',st); } } catch(e){}
+  function getInf(){ return window._infState ? (window._infState.infestation || 0) : 0; }
+  function setInf(val){
+    if(!window._infState) return;
+    window._infState.infestation = val;
+    // Persist — same pattern as every other state mutation in _bootApp
+    try { if(typeof S !== 'undefined') S.set('state', window._infState); } catch(e){}
   }
 
-  // Roach count target = floor(infestation / 10), capped at 20 rendered max
+  // Roach count target = floor(infestation / 10), capped at 40 rendered max
   // Infestation number itself stays uncapped — more bad days = worse when recovering
   const MAX_ROACHES = 40;
-  function targetRoachCount(){ return Math.min(MAX_ROACHES, Math.floor(_infestation / 10)); }
+  function targetRoachCount(){ return Math.min(MAX_ROACHES, Math.floor(getInf() / 10)); }
 
   function lerpF(a,b,t){ return a+(b-a)*t; }
   function angleDiff(a,b){ let d=b-a; while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2; return d; }
@@ -6552,15 +6547,16 @@ window.thmDeleteOwned=thmDeleteOwned;
   function updateInfestationBar(){
     const fill = document.getElementById('infestation-fill');
     if(!fill) return;
-    const displayPct = Math.min(_infestation, 100);
-    const overloaded = _infestation > 100;
+    const inf = getInf();
+    const displayPct = Math.min(inf, 100);
+    const overloaded = inf > 100;
     fill.style.width = displayPct + '%';
-    fill.style.background = overloaded ? '#ff00ff' : _infestation<20?'#ffa502':_infestation<50?'#ff6348':'#e03030';
+    fill.style.background = overloaded ? '#ff00ff' : inf<20?'#ffa502':inf<50?'#ff6348':'#e03030';
     // Update number display
     const numEl = document.getElementById('infestation-number');
     if(numEl){
-      numEl.textContent = Math.round(_infestation);
-      numEl.style.color = overloaded ? '#ff00ff' : _infestation<20?'#ffa502':_infestation<50?'#ff6348':'#e03030';
+      numEl.textContent = Math.round(inf);
+      numEl.style.color = overloaded ? '#ff00ff' : inf<20?'#ffa502':inf<50?'#ff6348':'#e03030';
     }
     // Update roach count
     const roachEl = document.getElementById('roach-count-display');
@@ -6575,15 +6571,16 @@ window.thmDeleteOwned=thmDeleteOwned;
     // rawScore is on 0-150 scale (same as audit engine)
     // Safe threshold: 70+ on this scale
     const r = Math.round(rawScore); // no clamp — can be 0-150+
+    const inf = getInf();
 
     if(r >= 70){
       // Safe zone — reduction scales aggressively with score
       // r=70 → -15, r=100 → -75, r=134 → -159, r=166 → -223
       // Also % based component — clears faster when heavily infested
       const flat = Math.round((r - 70) * 2.2 + 15);
-      const pct = Math.round(_infestation * 0.08); // 8% of current infestation
+      const pct = Math.round(inf * 0.08); // 8% of current infestation
       const reduction = flat + pct;
-      _infestation = Math.max(0, _infestation - reduction);
+      setInf(Math.max(0, inf - reduction));
     } else {
       // Bad zone — scale by how bad
       const badness = 70 - r; // 0–70
@@ -6592,23 +6589,22 @@ window.thmDeleteOwned=thmDeleteOwned;
         // 60-69: very mild, tiny random chance only
         delta = Math.random() < (badness / 70) * 0.25 ? 1 : 0;
       } else if(r >= 50){
-        delta = Math.round(badness * 0.08 * (1 + _infestation/200));
+        delta = Math.round(badness * 0.08 * (1 + inf/200));
       } else if(r >= 40){
-        delta = Math.round(badness * 0.18 * (1 + _infestation/150));
+        delta = Math.round(badness * 0.18 * (1 + inf/150));
       } else if(r >= 30){
-        delta = Math.round(badness * 0.30 * (1 + _infestation/120));
+        delta = Math.round(badness * 0.30 * (1 + inf/120));
       } else if(r >= 20){
-        delta = Math.round(badness * 0.42 * (1 + _infestation/100));
+        delta = Math.round(badness * 0.42 * (1 + inf/100));
       } else if(r >= 10){
-        delta = Math.round(badness * 0.55 * (1 + _infestation/80));
+        delta = Math.round(badness * 0.55 * (1 + inf/80));
       } else {
-        delta = Math.round(badness * 0.70 * (1 + _infestation/60));
+        delta = Math.round(badness * 0.70 * (1 + inf/60));
       }
       // No hard cap — can exceed 100
-      _infestation = _infestation + delta;
+      setInf(inf + delta);
     }
 
-    saveInf(); reconcileRoaches(); updateInfestationBar();
     reconcileRoaches();
     updateInfestationBar();
   };
