@@ -1604,28 +1604,7 @@ function toast(msg,dur=2800){const el=document.getElementById('toast');el.textCo
     });
     if(bossChanged){S.set('boss',boss_data);toast('⚔️ Boss fight expired — you didn\'t finish in time! Loss recorded.');}
 
-    // ── GAMBLE AUTO-RESOLVE: check using YESTERDAY's missions (before reset) ──
-    if(gamble_data.active_bet&&gamble_data.active_bet.date&&gamble_data.active_bet.date!==today){
-      const bet=gamble_data.active_bet;
-      const won=bet.missions.every(m=>_yesterdayMissions[m]==='done');
-      if(won){
-        const gb=applyBonus(bet.amount*2);
-        state.cash+=gb.total;
-        gamble_data.wins++;
-        gamble_data.history.push({name:bet.name,missions:bet.missions,amount:bet.amount,payout:gb.total,date:bet.date,won:true,allOrNothing:!!bet.allOrNothing,autoResolved:true});
-        gamble_data.active_bet=null;
-        S.set('gamble',gamble_data);S.set('state',state);
-        toast(`🏆 Gamble auto-resolved: YOU WON! +${gb.total} 💰`);
-      } else {
-        gamble_data.losses++;
-        const cashLost=bet.allOrNothing?state.cash:0;
-        if(bet.allOrNothing)state.cash=0;
-        gamble_data.history.push({name:bet.name,missions:bet.missions,amount:bet.amount,payout:0,date:bet.date,won:false,allOrNothing:!!bet.allOrNothing,cashWiped:cashLost,autoResolved:true});
-        gamble_data.active_bet=null;
-        S.set('gamble',gamble_data);S.set('state',state);
-        toast(`💀 Gamble auto-resolved: you lost. ${bet.allOrNothing?'Cash wiped to 0.':''}`);
-      }
-    }
+
 
     // ── CLAIMED DATES CLEANUP: prune old entries ──
     if(pass_data.claimedDates){
@@ -2220,11 +2199,7 @@ function lockBet(name,missions,amount){
 }
 function resolveBet(){
   const bet=gamble_data.active_bet;if(!bet)return;
-  // If bet is from a previous day, missions are already reset — can't resolve manually
-  if(bet.date!==todayStr()){
-    toast('⚠️ This bet is from a previous day — it will auto-resolve on next app open.');
-    return;
-  }
+
   const won=bet.missions.every(m=>missions_status[m]==='done');
   if(won){
     const gb=applyBonus(bet.amount*2);state.cash+=gb.total;gamble_data.wins++;
