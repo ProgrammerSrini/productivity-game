@@ -4184,10 +4184,31 @@ function runAudit(){
   const mb=fap?0.4:1.0;
   const ts=Math.max(0,(ps-pd)*mr*mb);
   const newDisc=Math.min(100,Math.round((state.pointer+ts)/2));
-  state.pointer=newDisc;S.set('state',state);updateUI();
+  state.pointer=newDisc;
   // store raw today score for threats
-  state._lastRawScore=Math.round(ts);S.set('state',state);
-  if(typeof window._updateInfestation==='function') window._updateInfestation(Math.round(ts));
+  state._lastRawScore=Math.round(ts);
+  // Update infestation directly on state — same pattern as cash
+  const _r=Math.round(ts);
+  const _inf=state.infestation||0;
+  if(_r>=70){
+    const _flat=Math.round((_r-70)*2.2+15);
+    const _pct=Math.round(_inf*0.08);
+    state.infestation=Math.max(0,_inf-(_flat+_pct));
+  } else {
+    const _badness=70-_r;
+    let _delta;
+    if(_r>=60){_delta=Math.random()<(_badness/70)*0.25?1:0;}
+    else if(_r>=50){_delta=Math.round(_badness*0.08*(1+_inf/200));}
+    else if(_r>=40){_delta=Math.round(_badness*0.18*(1+_inf/150));}
+    else if(_r>=30){_delta=Math.round(_badness*0.30*(1+_inf/120));}
+    else if(_r>=20){_delta=Math.round(_badness*0.42*(1+_inf/100));}
+    else if(_r>=10){_delta=Math.round(_badness*0.55*(1+_inf/80));}
+    else{_delta=Math.round(_badness*0.70*(1+_inf/60));}
+    state.infestation=_inf+_delta;
+  }
+  S.set('state',state);updateUI();
+  // Refresh roach canvas UI (visual only — data already saved above)
+  if(typeof window._refreshInfestationUI==='function') window._refreshInfestationUI();
   const el=document.getElementById('audit-result');el.style.display='block';
   el.innerHTML=`<div class="card" style="border-color:var(--purple)"><div style="font-size:14px;line-height:2;font-family:'Share Tech Mono',monospace">Study Engine: ${ps.toFixed(1)}<br>Penalty: -${pd.toFixed(1)}<br>Routine Mult: ${mr}x<br>${fap?'<span style="color:var(--red)">BREACH: 0.1x</span><br>':''}<hr style="border-color:var(--border);margin:4px 0"><strong style="color:var(--cyan)">Score: ${ts.toFixed(1)}%</strong><br><strong style="color:var(--yellow)">New Baseline: ${newDisc}%</strong></div></div>`;
   toast(`Audit: ${ts.toFixed(1)}% → Baseline ${newDisc}%`);
@@ -6373,25 +6394,18 @@ window.thmDeleteOwned=thmDeleteOwned;
 
   let _roaches = [];
 
-  // Infestation lives directly on the state object (same as cash/xp).
-  // _bootApp calls window._linkInfestationState(state) once after loading state from Supabase.
-  // After that, reading/writing window._infState.infestation IS the save — no separate saveInf needed.
-  // Every S.set('state', state) call already persists it because it's the same object reference.
+  // Infestation is saved as state.infestation — exactly like cash.
+  // runAudit (inside _bootApp) updates state.infestation and calls S.set('state',state).
+  // This IIFE only handles the visual (roach canvas + bar). No saving here.
+  // _bootApp calls window._linkInfestationState(state) so we can read the value for the UI.
   window._linkInfestationState = function(stateObj){
     window._infState = stateObj;
-    // Ensure the field exists for new users
     if(stateObj.infestation == null) stateObj.infestation = 0;
     reconcileRoaches();
     updateInfestationBar();
   };
 
   function getInf(){ return window._infState ? (window._infState.infestation || 0) : 0; }
-  function setInf(val){
-    if(!window._infState) return;
-    window._infState.infestation = val;
-    // Persist — same pattern as every other state mutation in _bootApp
-    try { if(typeof S !== 'undefined') S.set('state', window._infState); } catch(e){}
-  }
 
   // Roach count target = floor(infestation / 10), capped at 40 rendered max
   // Infestation number itself stays uncapped — more bad days = worse when recovering
@@ -6563,48 +6577,9 @@ window.thmDeleteOwned=thmDeleteOwned;
     if(roachEl) roachEl.textContent = targetRoachCount();
   }
 
-  // ── PUBLIC: called from runAuditAndLog after raw score computed ──
-  // rawScore = ts value from runAudit (0–150 scale), we normalize to 0–100
-  window._updateInfestation = function(rawScore){
-    // Normalize: raw max is ~150, treat 70+ as safe (maps to 0-100 range)
-    // We use the raw score directly on 0-100 scale (clamped)
-    // rawScore is on 0-150 scale (same as audit engine)
-    // Safe threshold: 70+ on this scale
-    const r = Math.round(rawScore); // no clamp — can be 0-150+
-    const inf = getInf();
-
-    if(r >= 70){
-      // Safe zone — reduction scales aggressively with score
-      // r=70 → -15, r=100 → -75, r=134 → -159, r=166 → -223
-      // Also % based component — clears faster when heavily infested
-      const flat = Math.round((r - 70) * 2.2 + 15);
-      const pct = Math.round(inf * 0.08); // 8% of current infestation
-      const reduction = flat + pct;
-      setInf(Math.max(0, inf - reduction));
-    } else {
-      // Bad zone — scale by how bad
-      const badness = 70 - r; // 0–70
-      let delta;
-      if(r >= 60){
-        // 60-69: very mild, tiny random chance only
-        delta = Math.random() < (badness / 70) * 0.25 ? 1 : 0;
-      } else if(r >= 50){
-        delta = Math.round(badness * 0.08 * (1 + inf/200));
-      } else if(r >= 40){
-        delta = Math.round(badness * 0.18 * (1 + inf/150));
-      } else if(r >= 30){
-        delta = Math.round(badness * 0.30 * (1 + inf/120));
-      } else if(r >= 20){
-        delta = Math.round(badness * 0.42 * (1 + inf/100));
-      } else if(r >= 10){
-        delta = Math.round(badness * 0.55 * (1 + inf/80));
-      } else {
-        delta = Math.round(badness * 0.70 * (1 + inf/60));
-      }
-      // No hard cap — can exceed 100
-      setInf(inf + delta);
-    }
-
+  // ── PUBLIC: called from runAudit after state.infestation is already updated & saved ──
+  // Just refreshes the visual (roach canvas + bar). No saving here.
+  window._refreshInfestationUI = function(){
     reconcileRoaches();
     updateInfestationBar();
   };
@@ -6614,10 +6589,11 @@ window.thmDeleteOwned=thmDeleteOwned;
   updateInfestationBar();
 
   // Expose for debug
-  window._getInfestation = function(){ return _infestation; };
-  window._resetInfestation = function(){ _infestation=0; _roaches=[]; saveInf(); reconcileRoaches(); updateInfestationBar(); };
-  // Also expose sync for external call
-  window._getInfestationRaw = function(){ return _infestation; };
+  window._resetInfestation = function(){
+    if(window._infState) window._infState.infestation = 0;
+    reconcileRoaches();
+    updateInfestationBar();
+  };
 })();
 </script>
 
