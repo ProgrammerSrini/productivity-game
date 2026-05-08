@@ -1649,8 +1649,6 @@ async function _loadCustomImgs(){
 const CUSTOM_IMG={};  // global so _saveCustomImg/_loadCustomImgs can access it before _bootApp runs
 
 function _bootApp(){
-// Sync infestation from Supabase now that S is ready
-if(typeof window._syncInfestationFromSupabase === 'function') window._syncInfestationFromSupabase();
 // Load custom chest sound if it exists in user data
 const savedSound = S.get('custom_chest_sound', null);
 if (savedSound) {
@@ -1666,8 +1664,6 @@ const weekKey=()=>{const d=new Date(),day=d.getDay()||7;d.setDate(d.getDate()-da
 // DATA
 // ═══════════════════════════════════════════
 let state=S.get('state',{pointer:50,xp:0,daily_xp:0,yesterday_xp:0,last_reset:todayStr(),cash:0,infestation:0});
-// Link infestation system to this state object — keeps infestation in sync so S.set('state',state) never clobbers it
-if(typeof window._linkInfestationState === 'function') window._linkInfestationState(state);
 let missions_status=S.get('missions',{});
 let achievements=S.get('achievements',{});
 let gamble_data=S.get('gamble',{wins:0,losses:0,history:[],active_bet:null});
@@ -5710,8 +5706,6 @@ function colRevealNext() {
   // ── Boot: show home screen and render initial UI ──
   updateUI();
   goto('home');
-  // Sync infestation from Supabase now that auth + S are fully ready
-  if(typeof window._syncInfestationFromSupabase === 'function') window._syncInfestationFromSupabase();
 } // end _bootApp
 
 // ── Auth state watcher ──
@@ -6497,24 +6491,11 @@ window.thmDeleteOwned=thmDeleteOwned;
 
   let _roaches = [];
 
-  // Infestation lives directly on the state object (same as cash/xp).
-  // _bootApp calls window._linkInfestationState(state) once after loading state from Supabase.
-  // After that, reading/writing window._infState.infestation IS the save — no separate saveInf needed.
-  // Every S.set('state', state) call already persists it because it's the same object reference.
-  window._linkInfestationState = function(stateObj){
-    window._infState = stateObj;
-    // Ensure the field exists for new users
-    if(stateObj.infestation == null) stateObj.infestation = 0;
-    reconcileRoaches();
-    updateInfestationBar();
-  };
-
-  function getInf(){ return window._infState ? (window._infState.infestation || 0) : 0; }
+  function getInf(){ return window._appState ? (window._appState.infestation || 0) : 0; }
   function setInf(val){
-    if(!window._infState) return;
-    window._infState.infestation = val;
-    // Persist — same pattern as every other state mutation in _bootApp
-    try { if(typeof S !== 'undefined') S.set('state', window._infState); } catch(e){}
+    if(!window._appState) return;
+    window._appState.infestation = val;
+    window._appS.set('state', window._appState);
   }
 
   // Roach count target = floor(infestation / 10), capped at 40 rendered max
@@ -6738,10 +6719,9 @@ window.thmDeleteOwned=thmDeleteOwned;
   updateInfestationBar();
 
   // Expose for debug
-  window._getInfestation = function(){ return _infestation; };
-  window._resetInfestation = function(){ _infestation=0; _roaches=[]; saveInf(); reconcileRoaches(); updateInfestationBar(); };
-  // Also expose sync for external call
-  window._getInfestationRaw = function(){ return _infestation; };
+  window._getInfestation = function(){ return getInf(); };
+  window._resetInfestation = function(){ setInf(0); _roaches=[]; reconcileRoaches(); updateInfestationBar(); };
+  window._getInfestationRaw = function(){ return getInf(); };
 })();
 
 // ═══════════════════════════════════════════════════════════════
