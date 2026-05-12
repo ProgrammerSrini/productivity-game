@@ -2057,8 +2057,6 @@ function updateUI(){
   if(shopCashEl)shopCashEl.textContent=state.cash.toLocaleString();
   const shopBankEl=document.getElementById('shop-bank-disp');
   if(shopBankEl)shopBankEl.textContent=getBankBalance().toLocaleString();
-
-  S.set('state',state);
 }
 
 function renderWeeklyChart() {
@@ -6497,7 +6495,7 @@ window.thmDeleteOwned=thmDeleteOwned;
   function setInf(val){
     if(!window._appState) return;
     window._appState.infestation = val;
-    window._appS.set('state', window._appState);
+    // Don't save here — caller (runAudit) does the single S.set after all updates
   }
 
   // Roach count target = floor(infestation / 10), capped at 40 rendered max
