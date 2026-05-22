@@ -509,10 +509,10 @@ select{-webkit-appearance:none;appearance:none;}
   <div class="card">
     <div class="card-title">TODAY'S STATS</div>
     <div class="stat-row">
-      <div class="stat-box"><div class="stat-val" id="h-daily-xp">0</div><div class="stat-lbl">Today XP</div></div>
-      <div class="stat-box"><div class="stat-val" id="h-total-xp">0</div><div class="stat-lbl">Total XP</div></div>
-      <div class="stat-box"><div class="stat-val" id="h-missions">0</div><div class="stat-lbl">Missions</div></div>
-      <div class="stat-box"><div class="stat-val" id="h-cash">0</div><div class="stat-lbl">💰 Cash</div></div>
+      <div class="stat-box" style="border-color:rgba(0,210,160,.3);"><div class="stat-val" id="h-daily-xp" style="font-size:26px;color:var(--cyan);">0</div><div class="stat-lbl">Today XP</div></div>
+      <div class="stat-box" style="border-color:rgba(108,92,231,.3);"><div class="stat-val" id="h-total-xp" style="font-size:26px;color:var(--purple);">0</div><div class="stat-lbl">Total XP</div></div>
+      <div class="stat-box" style="border-color:rgba(116,185,255,.3);"><div class="stat-val" id="h-missions" style="font-size:26px;color:var(--blue);">0</div><div class="stat-lbl">Missions</div></div>
+      <div class="stat-box" style="border-color:rgba(255,217,61,.3);"><div class="stat-val" id="h-cash" style="font-size:26px;color:var(--yellow);">0</div><div class="stat-lbl">💰 Cash</div></div>
     </div>
   </div>
   <div class="card">
@@ -2153,7 +2153,7 @@ function renderMissions(){
 function claimMission(name,xp){
   if(missions_status[name]==='done')return;
   showModal('Complete Mission?',`Did you genuinely complete:<br><br><strong>${name}</strong><br><br>+${xp} XP`,[
-    {txt:'YES ✅',cls:'btn-cyan',fn:()=>{missions_status[name]='done';state.daily_xp+=xp;state.xp+=xp;const mb=applyBonus(xp);state.cash+=mb.total;S.set('missions',missions_status);autoUpdateStreaks([name]);updateUI();renderMissions();toast(`+${xp} XP +${mb.total} 💰${mb.extra>0?' ('+mb.pct+'% badge bonus!)':''} — ${name}!`);closeModal();}},
+    {txt:'YES ✅',cls:'btn-cyan',fn:()=>{missions_status[name]='done';state.daily_xp+=xp;state.xp+=xp;const mb=applyBonus(xp);state.cash+=mb.total;S.set('state',state);S.set('missions',missions_status);autoUpdateStreaks([name]);updateUI();renderMissions();toast(`+${xp} XP +${mb.total} 💰${mb.extra>0?' ('+mb.pct+'% badge bonus!)':''} — ${name}!`);closeModal();}},
     {txt:'Cancel',cls:'btn-purple',fn:closeModal}
   ]);
 }
