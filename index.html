@@ -251,7 +251,7 @@ select{-webkit-appearance:none;appearance:none;}
 #crop-overlay{display:none;position:fixed;inset:0;z-index:850;background:rgba(0,0,0,.97);align-items:center;justify-content:center;flex-direction:column;padding:16px;overflow-y:auto;}
 #crop-overlay.show{display:flex;}
 @media(max-width:520px){.game-card{width:130px;height:186px;}.flip-outer{width:130px;height:186px;}.chest-row{flex-direction:column;}}
-@media(max-width:480px){.mission-grid,.boss-grid,.ach-grid{grid-template-columns:1fr 1fr;}.badge-grid{grid-template-columns:1fr 1fr 1fr;}#charts-grid{grid-template-columns:1fr!important;}}
+@media(max-width:480px){.mission-grid,.boss-grid,.ach-grid{grid-template-columns:1fr 1fr;}.badge-grid{grid-template-columns:1fr 1fr 1fr;}}
 
 /* ── HABIT TRACKER OVERLAY ── */
 #ht-overlay{display:none;position:fixed;inset:0;z-index:300;background:var(--bg);flex-direction:column;}
@@ -1277,31 +1277,47 @@ select{-webkit-appearance:none;appearance:none;}
 <!-- CHARTS -->
 <div id="screen-charts" class="screen">
   <div class="card">
-    <div class="card-title">📈 WEEKLY PROGRESS CHARTS</div>
-    <div style="font-size:14px;color:var(--gray);margin-bottom:10px">Current week data from your daily logs. Submit logs to populate.</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div class="card-title" style="margin-bottom:2px">📈 WEEKLY CHARTS</div>
+        <div style="font-size:12px;color:var(--gray)">Last 7 days from your daily logs</div>
+      </div>
       <button class="btn btn-purple btn-sm" onclick="renderCharts()">🔄 Refresh</button>
     </div>
   </div>
-  <div id="charts-stats" style="display:none" class="card">
-    <div id="charts-stats-inner" style="font-size:13px;color:var(--yellow);font-weight:600"></div>
+  <!-- Stats row -->
+  <div id="charts-stats" style="display:none">
+    <div id="charts-stats-inner"></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="charts-grid">
-    <div class="card" style="padding:10px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--purple)">Daily Progress %</div>
-      <canvas id="chart-progress" height="160"></canvas>
+  <!-- Charts stacked full width -->
+  <div id="charts-grid" style="display:none;flex-direction:column;gap:12px">
+    <div class="card" style="padding:16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:800;color:var(--purple);letter-spacing:.3px">📐 Daily Progress %</div>
+        <div style="font-size:12px;color:var(--gray)">Target: A-Tier (80%)</div>
+      </div>
+      <canvas id="chart-progress"></canvas>
     </div>
-    <div class="card" style="padding:10px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--cyan)">Daily XP Earned</div>
-      <canvas id="chart-xp" height="160"></canvas>
+    <div class="card" style="padding:16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:800;color:var(--cyan);letter-spacing:.3px">⚡ Daily XP Earned</div>
+        <div style="font-size:12px;color:var(--gray)">Target: 800 XP</div>
+      </div>
+      <canvas id="chart-xp"></canvas>
     </div>
-    <div class="card" style="padding:10px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--orange)">Study Hours</div>
-      <canvas id="chart-study" height="160"></canvas>
+    <div class="card" style="padding:16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:800;color:var(--orange);letter-spacing:.3px">📚 Study Hours</div>
+        <div style="font-size:12px;color:var(--gray)">Target: 8h/day</div>
+      </div>
+      <canvas id="chart-study"></canvas>
     </div>
-    <div class="card" style="padding:10px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--yellow)">Missions Completed</div>
-      <canvas id="chart-missions" height="160"></canvas>
+    <div class="card" style="padding:16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:800;color:var(--yellow);letter-spacing:.3px">✅ Missions Completed</div>
+        <div style="font-size:12px;color:var(--gray)">Target: all daily</div>
+      </div>
+      <canvas id="chart-missions"></canvas>
     </div>
   </div>
   <div id="charts-empty" style="display:none;text-align:center;padding:60px;color:var(--gray)">
@@ -4416,21 +4432,57 @@ function renderCharts(){
     studyData.push(wd.study||0);
     missData.push(wd.missions||0);
   }
-  // hasData: true if ANY of the 7 days has a real log entry (even with 0 values)
   const hasData=days.some(dk=>weekly_data[dk]&&typeof weekly_data[dk]==='object');
   document.getElementById('charts-empty').style.display=hasData?'none':'block';
-  document.getElementById('charts-grid').style.display=hasData?'grid':'none';
+  const grid=document.getElementById('charts-grid');
+  grid.style.display=hasData?'flex':'none';
   if(!hasData)return;
-  document.getElementById('charts-stats').style.display='block';
-  // Only average over days that were actually logged
+  // Stats cards
   const loggedCount=days.filter(dk=>weekly_data[dk]&&typeof weekly_data[dk]==='object').length||1;
   const avgXP=(xpData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(0);
   const avgStudy=(studyData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(1);
   const avgMiss=(missData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(1);
   const avgProg=(pData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(1);
-  document.getElementById('charts-stats-inner').innerHTML=`📊 Avg Progress: ${avgProg}% | Avg XP: ${avgXP} | Avg Study: ${avgStudy}h/day | Avg Missions: ${avgMiss}`;
-  // Use requestAnimationFrame so the browser finishes layout before we read
-  // canvas.offsetWidth — without this it returns 0 and charts render blank.
+  const bestXP=Math.max(...xpData);
+  const bestStudy=Math.max(...studyData);
+  const perfectDays=pData.filter(v=>v>=80).length;
+  const statsEl=document.getElementById('charts-stats');
+  statsEl.style.display='block';
+  document.getElementById('charts-stats-inner').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:4px">
+      <div style="background:var(--bg4);border:1px solid rgba(108,92,231,.35);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--purple)">${avgProg}%</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:3px;letter-spacing:.3px">AVG PROGRESS</div>
+      </div>
+      <div style="background:var(--bg4);border:1px solid rgba(0,210,160,.35);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--cyan)">${avgXP}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:3px;letter-spacing:.3px">AVG XP/DAY</div>
+      </div>
+      <div style="background:var(--bg4);border:1px solid rgba(255,165,2,.35);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--orange)">${avgStudy}h</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:3px;letter-spacing:.3px">AVG STUDY</div>
+      </div>
+      <div style="background:var(--bg4);border:1px solid rgba(255,217,61,.35);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--yellow)">${avgMiss}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:3px;letter-spacing:.3px">AVG MISSIONS</div>
+      </div>
+      <div style="background:var(--bg4);border:1px solid rgba(0,210,160,.25);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--cyan)">${bestXP}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:3px;letter-spacing:.3px">BEST XP DAY</div>
+      </div>
+      <div style="background:var(--bg4);border:1px solid rgba(255,165,2,.25);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--orange)">${bestStudy}h</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:3px;letter-spacing:.3px">BEST STUDY DAY</div>
+      </div>
+      <div style="background:var(--bg4);border:1px solid rgba(0,210,160,.4);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:${perfectDays>=5?'var(--cyan)':perfectDays>=3?'var(--yellow)':'var(--red)'}">${perfectDays}/7</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:3px;letter-spacing:.3px">A-TIER DAYS</div>
+      </div>
+      <div style="background:var(--bg4);border:1px solid rgba(108,92,231,.25);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--purple)">${loggedCount}/7</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:3px;letter-spacing:.3px">DAYS LOGGED</div>
+      </div>
+    </div>`;
   requestAnimationFrame(()=>{
     drawLineChart('chart-progress',labels,pData,'#6c5ce7',80,'A-Tier (80%)','%');
     drawBarChart('chart-xp',labels,xpData,'#00d2a0',800,'Target 800 XP','XP');
@@ -4443,116 +4495,116 @@ function drawLineChart(id,labels,data,color,targetVal,targetLabel,unit,fill){
   const canvas=document.getElementById(id);if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const dpr=window.devicePixelRatio||1;
-  const cssW=canvas.offsetWidth||300,cssH=200;
+  const cssW=canvas.offsetWidth||600,cssH=240;
   canvas.width=cssW*dpr;canvas.height=cssH*dpr;
   canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';
   ctx.scale(dpr,dpr);
-  const W=cssW,H=cssH,pad={t:24,r:14,b:38,l:46};
+  const W=cssW,H=cssH,pad={t:30,r:20,b:44,l:54};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   ctx.clearRect(0,0,W,H);
   const bgCol=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#0a0a18';
   const isLightBg=_thmPerceivedBrightness(bgCol)>128;
-  const gridCol=isLightBg?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.08)';
-  const labelCol=isLightBg?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.55)';
+  const gridCol=isLightBg?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.07)';
+  const labelCol=isLightBg?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.5)';
   const xLabelCol=isLightBg?'rgba(0,0,0,0.65)':'rgba(255,255,255,0.65)';
   const max=Math.max(...data,targetVal)*1.25||10;
   const scX=cW/(labels.length-1||1),scY=cH/max;
-  // grid
   ctx.strokeStyle=gridCol;ctx.lineWidth=1;
   for(let i=0;i<=4;i++){
     const y=pad.t+cH-i*(cH/4);
     ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();
-    ctx.fillStyle=labelCol;ctx.font='bold 12px Inter';ctx.textAlign='right';
-    ctx.fillText(Math.round(max*i/4)+unit,pad.l-5,y+4);
+    ctx.fillStyle=labelCol;ctx.font='bold 13px Inter';ctx.textAlign='right';
+    ctx.fillText(Math.round(max*i/4)+unit,pad.l-8,y+5);
   }
-  // target line
-  ctx.strokeStyle=color+'88';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+  ctx.strokeStyle=color+'88';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
   const ty=pad.t+cH-targetVal*scY;
   ctx.beginPath();ctx.moveTo(pad.l,ty);ctx.lineTo(pad.l+cW,ty);ctx.stroke();
-  ctx.fillStyle=color;ctx.font='bold 12px Inter';ctx.textAlign='left';
-  ctx.fillText(targetLabel,pad.l+4,ty-5);
+  ctx.fillStyle=color;ctx.font='bold 13px Inter';ctx.textAlign='left';
+  ctx.fillText(targetLabel,pad.l+6,ty-6);
   ctx.setLineDash([]);
-  // fill
   if(fill){
     ctx.beginPath();
     data.forEach((v,i)=>{const x=pad.l+i*scX,y=pad.t+cH-v*scY;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
     ctx.lineTo(pad.l+(data.length-1)*scX,pad.t+cH);ctx.lineTo(pad.l,pad.t+cH);ctx.closePath();
-    ctx.fillStyle=color+'33';ctx.fill();
+    const grad=ctx.createLinearGradient(0,pad.t,0,pad.t+cH);
+    grad.addColorStop(0,color+'55');grad.addColorStop(1,color+'08');
+    ctx.fillStyle=grad;ctx.fill();
   }
-  // line
-  ctx.strokeStyle=color;ctx.lineWidth=3;ctx.lineJoin='round';
+  ctx.strokeStyle=color;ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.lineCap='round';
   ctx.beginPath();
   data.forEach((v,i)=>{const x=pad.l+i*scX,y=pad.t+cH-v*scY;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
   ctx.stroke();
-  // dots + value labels
   data.forEach((v,i)=>{
     const x=pad.l+i*scX,y=pad.t+cH-v*scY;
-    ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);
-    ctx.fillStyle=v>=targetVal?'#00d2a0':color;ctx.fill();
-    ctx.strokeStyle=isLightBg?'rgba(255,255,255,.6)':'rgba(0,0,0,.6)';ctx.lineWidth=1.5;ctx.stroke();
+    const hit=v>=targetVal;
+    ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);
+    ctx.fillStyle=(hit?'#00d2a0':color)+'33';ctx.fill();
+    ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);
+    ctx.fillStyle=hit?'#00d2a0':color;ctx.fill();
+    ctx.strokeStyle=isLightBg?'rgba(255,255,255,.8)':'rgba(0,0,0,.7)';ctx.lineWidth=2;ctx.stroke();
     if(v>0){
-      ctx.fillStyle=v>=targetVal?'#00d2a0':color;
-      ctx.font='bold 13px Inter';ctx.textAlign='center';
-      ctx.fillText(v+unit,x,y-10);
+      ctx.fillStyle=hit?'#00d2a0':color;
+      ctx.font='bold 14px Inter';ctx.textAlign='center';
+      ctx.fillText(v+unit,x,y-14);
     }
   });
-  // x labels
-  ctx.fillStyle=xLabelCol;ctx.font='bold 12px Inter';ctx.textAlign='center';
-  labels.forEach((l,i)=>{ctx.fillText(l.split(',')[0],pad.l+i*scX,H-8);});
+  ctx.fillStyle=xLabelCol;ctx.font='bold 13px Inter';ctx.textAlign='center';
+  labels.forEach((l,i)=>{ctx.fillText(l.split(',')[0],pad.l+i*scX,H-10);});
 }
 
 function drawBarChart(id,labels,data,color,targetVal,targetLabel,unit){
   const canvas=document.getElementById(id);if(!canvas)return;
   const ctx=canvas.getContext('2d');
   const dpr=window.devicePixelRatio||1;
-  const cssW=canvas.offsetWidth||300,cssH=200;
+  const cssW=canvas.offsetWidth||600,cssH=240;
   canvas.width=cssW*dpr;canvas.height=cssH*dpr;
   canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';
   ctx.scale(dpr,dpr);
-  const W=cssW,H=cssH,pad={t:14,r:14,b:38,l:46};
+  const W=cssW,H=cssH,pad={t:30,r:20,b:44,l:54};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   ctx.clearRect(0,0,W,H);
   const bgCol=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#0a0a18';
   const isLightBg=_thmPerceivedBrightness(bgCol)>128;
-  const gridCol=isLightBg?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.08)';
-  const labelCol=isLightBg?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.55)';
+  const gridCol=isLightBg?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.07)';
+  const labelCol=isLightBg?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.5)';
   const xLabelCol=isLightBg?'rgba(0,0,0,0.65)':'rgba(255,255,255,0.65)';
   const barTextCol=isLightBg?'rgba(0,0,0,0.85)':'rgba(255,255,255,0.9)';
   const max=Math.max(...data,targetVal)*1.25||10;
-  const scY=cH/max,bW=(cW/labels.length)*0.65,gap=(cW/labels.length)*0.35;
-  // grid
+  const scY=cH/max,bW=(cW/labels.length)*0.6,gap=(cW/labels.length)*0.4;
   ctx.strokeStyle=gridCol;ctx.lineWidth=1;
   for(let i=0;i<=4;i++){
     const y=pad.t+cH-i*(cH/4);
     ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();
-    ctx.fillStyle=labelCol;ctx.font='bold 12px Inter';ctx.textAlign='right';
-    ctx.fillText(Math.round(max*i/4),pad.l-5,y+4);
+    ctx.fillStyle=labelCol;ctx.font='bold 13px Inter';ctx.textAlign='right';
+    ctx.fillText(Math.round(max*i/4),pad.l-8,y+5);
   }
-  // target line
-  ctx.strokeStyle=color+'88';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+  ctx.strokeStyle=color+'88';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
   const ty=pad.t+cH-targetVal*scY;
   ctx.beginPath();ctx.moveTo(pad.l,ty);ctx.lineTo(pad.l+cW,ty);ctx.stroke();
-  ctx.fillStyle=color;ctx.font='bold 12px Inter';ctx.textAlign='left';
-  ctx.fillText(targetLabel,pad.l+4,ty-5);
+  ctx.fillStyle=color;ctx.font='bold 13px Inter';ctx.textAlign='left';
+  ctx.fillText(targetLabel,pad.l+6,ty-6);
   ctx.setLineDash([]);
-  // bars
   data.forEach((v,i)=>{
-    const x=pad.l+i*(cW/labels.length)+gap/2,h=v*scY,y=pad.t+cH-h;
+    const x=pad.l+i*(cW/labels.length)+gap/2,h=Math.max(v*scY,0),y=pad.t+cH-h;
+    const hit=v>=targetVal;
+    const barColor=hit?'#00d2a0':color;
     if(h>0){
+      // glow shadow
+      ctx.shadowColor=barColor+'88';ctx.shadowBlur=8;
       const grad=ctx.createLinearGradient(x,y,x,pad.t+cH);
-      grad.addColorStop(0,color);grad.addColorStop(1,color+'44');
+      grad.addColorStop(0,barColor);grad.addColorStop(1,barColor+'33');
       ctx.fillStyle=grad;
-      ctx.beginPath();ctx.roundRect(x,y,bW,h,4);ctx.fill();
+      ctx.beginPath();ctx.roundRect(x,y,bW,h,5);ctx.fill();
+      ctx.shadowBlur=0;ctx.shadowColor='transparent';
     }
     if(v>0){
-      ctx.fillStyle=v>=targetVal?'#00d2a0':barTextCol;
-      ctx.font='bold 12px Inter';ctx.textAlign='center';
-      ctx.fillText(v,x+bW/2,y-5);
+      ctx.fillStyle=hit?'#00d2a0':barTextCol;
+      ctx.font='bold 14px Inter';ctx.textAlign='center';
+      ctx.fillText(v,x+bW/2,y-7);
     }
   });
-  // x labels
-  ctx.fillStyle=xLabelCol;ctx.font='bold 12px Inter';ctx.textAlign='center';
-  labels.forEach((l,i)=>{ctx.fillText(l.split(',')[0],pad.l+i*(cW/labels.length)+bW/2+gap/2,H-8);});
+  ctx.fillStyle=xLabelCol;ctx.font='bold 13px Inter';ctx.textAlign='center';
+  labels.forEach((l,i)=>{ctx.fillText(l.split(',')[0],pad.l+i*(cW/labels.length)+bW/2+gap/2,H-10);});
 }
 
 // ═══════════════════════════════════════════
