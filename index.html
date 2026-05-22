@@ -4462,7 +4462,7 @@ function showModal(title,body,btns){
   btns.forEach(b=>{const btn=document.createElement('button');btn.className='btn '+b.cls;btn.innerHTML=b.txt;btn.onclick=b.fn;bc.appendChild(btn);});
   document.getElementById('modal-overlay').classList.add('show');
 }
-function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');if(typeof window._pendingModalClose==='function'){window._pendingModalClose();window._pendingModalClose=null;}}
 function closeModalOut(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
 // toastTimer and toast() are defined earlier (before auto-reset IIFE) — see above
 
@@ -4487,13 +4487,12 @@ function saveChartTargets(t){S.set('chartTargets',t);}
 
 function openChartStats(){
   const ov=document.getElementById('ch-stats-overlay');
-  if(ov) ov.classList.add('open');
-  // populate if we have data
+  if(ov){ov.style.display='flex';ov.classList.add('open');}
   if(window._chLastData) _chRenderStats(window._chLastData);
 }
 function closeChartStats(){
   const ov=document.getElementById('ch-stats-overlay');
-  if(ov) ov.classList.remove('open');
+  if(ov){ov.classList.remove('open');ov.style.display='';}
 }
 
 function _chRenderStats(d){
@@ -4569,7 +4568,13 @@ function _chRenderStats(d){
 
 function openChartTargets(){
   const t=getChartTargets();
-  showModal('🎯 Edit Targets',`
+  const statsOv=document.getElementById('ch-stats-overlay');
+  const statsWasOpen=statsOv&&statsOv.classList.contains('open');
+  if(statsWasOpen) statsOv.style.display='none';
+  function _restoreStats(){if(statsWasOpen&&statsOv){statsOv.style.display='flex';}}
+  // Register so clicking outside modal also restores stats overlay
+  window._pendingModalClose=_restoreStats;
+  showModal('\uD83C\uDFAF Edit Targets',`
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:var(--gray);font-weight:700;display:block;margin-bottom:4px">AVG PROGRESS target (%)</label>
         <input id="ct-progress" type="number" value="${t.progress}" min="1" max="100" style="width:100%;padding:9px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:Inter,sans-serif;font-size:13px;outline:none;"></div>
@@ -4582,7 +4587,7 @@ function openChartTargets(){
       <div><label style="font-size:12px;color:var(--gray);font-weight:700;display:block;margin-bottom:4px">TOTAL XP target (for ring)</label>
         <input id="ct-totalxp" type="number" value="${t.totalXP}" min="100" style="width:100%;padding:9px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:Inter,sans-serif;font-size:13px;outline:none;"></div>
     </div>`,
-  [{txt:'💾 Save',cls:'btn-cyan',fn(){
+  [{txt:'\uD83D\uDCBE Save',cls:'btn-cyan',fn(){
     const nt={
       progress:parseFloat(document.getElementById('ct-progress').value)||80,
       xp:parseFloat(document.getElementById('ct-xp').value)||800,
@@ -4590,10 +4595,14 @@ function openChartTargets(){
       missions:parseFloat(document.getElementById('ct-missions').value)||30,
       totalXP:parseFloat(document.getElementById('ct-totalxp').value)||5000,
     };
-    saveChartTargets(nt);closeModal();renderCharts();
-    if(document.getElementById('ch-stats-overlay')?.classList.contains('open')&&window._chLastData)_chRenderStats(window._chLastData);
-    toast('🎯 Targets saved!');
-  }},{txt:'Cancel',cls:'',fn:closeModal}]);
+    window._pendingModalClose=null;
+    saveChartTargets(nt);closeModal();_restoreStats();renderCharts();
+    if(window._chLastData)_chRenderStats(window._chLastData);
+    toast('\uD83C\uDFAF Targets saved!');
+  }},{txt:'Cancel',cls:'',fn(){
+    window._pendingModalClose=null;
+    closeModal();_restoreStats();
+  }}]);
 }
 
 function renderCharts(){
