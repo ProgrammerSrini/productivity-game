@@ -122,7 +122,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 .btn-full{width:100%;}
 .btn-sm{padding:5px 12px;font-size:12px;}
 /* MODAL */
-#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(4px);}
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(4px);}
 #modal-overlay.show{display:flex;}
 #modal-box{background:var(--bg3);border:1px solid var(--purple);border-radius:12px;padding:22px;max-width:480px;width:100%;max-height:88vh;overflow-y:auto;}
 #modal-title{font-family:'Inter',sans-serif;font-size:19px;margin-bottom:12px;}
@@ -1293,18 +1293,19 @@ select{-webkit-appearance:none;appearance:none;}
 #ch-stats-close-btn{width:32px;height:32px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--gray);font-size:16px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 #ch-stats-close-btn:hover{border-color:var(--red);color:var(--red);}
 #ch-stats-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;}
-.ch-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:12px;}
-.ch-stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;overflow:hidden;transition:.2s;}
+.ch-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+@media(max-width:480px){.ch-stat-grid{grid-template-columns:repeat(2,1fr);}}
+.ch-stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px 10px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;overflow:hidden;transition:.2s;}
 .ch-stat-card::before{content:'';position:absolute;inset:0;opacity:.06;background:var(--ch-accent,var(--purple));}
-.ch-ring-wrap{position:relative;width:72px;height:72px;flex-shrink:0;}
+.ch-ring-wrap{position:relative;width:96px;height:96px;flex-shrink:0;}
 .ch-ring-wrap canvas{display:block;}
 .ch-ring-val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;}
-.ch-ring-num{font-size:15px;font-weight:800;color:var(--ch-accent,var(--purple));}
-.ch-ring-unit{font-size:10px;color:var(--gray);margin-top:1px;}
+.ch-ring-num{font-size:18px;font-weight:800;color:var(--ch-accent,var(--purple));}
+.ch-ring-unit{font-size:11px;color:var(--gray);margin-top:2px;}
 .ch-stat-lbl{font-size:11px;font-weight:700;color:var(--gray);letter-spacing:.4px;text-align:center;}
 .ch-stat-sub{font-size:10px;color:var(--gray);opacity:.7;text-align:center;}
-.ch-tier-strip{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
-.ch-tier-pip{flex:1;min-width:44px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;transition:.2s;}
+.ch-tier-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:12px;}
+.ch-tier-pip{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 4px;text-align:center;transition:.2s;}
 .ch-tier-pip-val{font-size:22px;font-weight:900;line-height:1;}
 .ch-tier-pip-lbl{font-size:10px;color:var(--gray);letter-spacing:.4px;margin-top:3px;}
 </style>
@@ -4469,9 +4470,9 @@ function closeModalOut(e){if(e.target===document.getElementById('modal-overlay')
 // CHARTS
 // ═══════════════════════════════════════════
 
-// Default targets (editable by user)
+// Default targets (editable by user) — saved to Supabase via S
 function getChartTargets(){
-  try{const t=JSON.parse(localStorage.getItem('chartTargets')||'{}');
+  try{const t=S.get('chartTargets',{});
     return {
       progress: t.progress!=null?t.progress:80,
       xp:       t.xp!=null?t.xp:800,
@@ -4482,7 +4483,7 @@ function getChartTargets(){
     };
   }catch(e){return{progress:80,xp:800,study:8,missions:30,dailyXP:500,totalXP:5000};}
 }
-function saveChartTargets(t){localStorage.setItem('chartTargets',JSON.stringify(t));}
+function saveChartTargets(t){S.set('chartTargets',t);}
 
 function openChartStats(){
   const ov=document.getElementById('ch-stats-overlay');
@@ -4518,7 +4519,7 @@ function _chRenderStats(d){
     const ringPct=Math.min(1,s.tgtPct);
     div.innerHTML=`
       <div class="ch-ring-wrap">
-        <canvas width="72" height="72" data-pct="${ringPct}" data-color="${s.color}" data-hit="${hitTarget}"></canvas>
+        <canvas width="96" height="96" data-pct="${ringPct}" data-color="${s.color}" data-hit="${hitTarget}"></canvas>
         <div class="ch-ring-val">
           <div class="ch-ring-num" style="color:${hitTarget?'#00d2a0':s.color}">${s.val}</div>
           <div class="ch-ring-unit">${s.unit}</div>
@@ -4535,12 +4536,12 @@ function _chRenderStats(d){
       const hit=c.dataset.hit==='true';
       const col=hit?'#00d2a0':c.dataset.color;
       const dpr=window.devicePixelRatio||1;
-      const sz=72;
+      const sz=96;
       c.width=sz*dpr;c.height=sz*dpr;
       c.style.width=sz+'px';c.style.height=sz+'px';
       const ctx=c.getContext('2d');
       ctx.scale(dpr,dpr);
-      const cx=sz/2,cy=sz/2,r=30,lw=6;
+      const cx=sz/2,cy=sz/2,r=40,lw=8;
       const bgCol=getComputedStyle(document.documentElement).getPropertyValue('--bg4').trim()||'#2d2d44';
       ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,Math.PI*2-Math.PI/2);
       ctx.strokeStyle=bgCol;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
