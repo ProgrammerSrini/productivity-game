@@ -1276,6 +1276,23 @@ select{-webkit-appearance:none;appearance:none;}
 
 <!-- CHARTS -->
 <style>
+/* ── CHARTS SCREEN ── */
+.ch-chart-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;height:calc(100svh - 52px - 60px - 16px);}
+.ch-chart-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+.ch-chart-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px 4px;flex-shrink:0;}
+.ch-chart-title{font-size:12px;font-weight:800;letter-spacing:.2px;}
+.ch-chart-meta{font-size:10px;color:var(--gray);}
+.ch-chart-body{padding:0 8px 8px;display:flex;flex-direction:column;flex:1;min-height:0;}
+.ch-chart-body canvas{flex:1;min-height:0;width:100%!important;display:block;}
+
+/* ── STATS OVERLAY ── */
+#ch-stats-overlay{display:none;position:fixed;inset:0;z-index:300;background:var(--bg);flex-direction:column;}
+#ch-stats-overlay.open{display:flex;}
+#ch-stats-topbar{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;height:52px;background:var(--bg2,var(--bg));border-bottom:1px solid var(--purple);}
+#ch-stats-topbar-title{font-family:'Inter',sans-serif;font-size:15px;font-weight:700;color:var(--white);letter-spacing:.3px;flex:1;}
+#ch-stats-close-btn{width:32px;height:32px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--gray);font-size:16px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#ch-stats-close-btn:hover{border-color:var(--red);color:var(--red);}
+#ch-stats-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px;}
 .ch-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:12px;}
 .ch-stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;overflow:hidden;transition:.2s;}
 .ch-stat-card::before{content:'';position:absolute;inset:0;opacity:.06;background:var(--ch-accent,var(--purple));}
@@ -1290,75 +1307,72 @@ select{-webkit-appearance:none;appearance:none;}
 .ch-tier-pip{flex:1;min-width:44px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;transition:.2s;}
 .ch-tier-pip-val{font-size:22px;font-weight:900;line-height:1;}
 .ch-tier-pip-lbl{font-size:10px;color:var(--gray);letter-spacing:.4px;margin-top:3px;}
-.ch-chart-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:0;overflow:hidden;transition:border-color .2s;min-height:calc(100svh - 52px);display:flex;flex-direction:column;}
-.ch-chart-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 14px;user-select:none;flex-shrink:0;}
-.ch-chart-title{font-size:14px;font-weight:800;letter-spacing:.3px;}
-.ch-chart-meta{font-size:11px;color:var(--gray);}
-.ch-chart-chevron{display:none;}
-.ch-chart-body{padding:0 12px 14px;display:flex;flex-direction:column;flex:1;min-height:0;}
-.ch-chart-body canvas{flex:1;min-height:0;width:100%!important;}
-.ch-chart-card.expanded .ch-chart-chevron{transform:rotate(180deg);}
-/* stat section compact scroll snap */
-#screen-charts .card{margin-bottom:0;border-radius:10px 10px 0 0;}
-.ch-chart-card{scroll-margin-top:52px;}
 </style>
 
 <div id="screen-charts" class="screen">
-  <div class="card" style="margin-bottom:12px">
+  <!-- Top bar card -->
+  <div class="card" style="margin-bottom:8px;padding:10px 14px;">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div>
         <div class="card-title" style="margin-bottom:2px">📈 WEEKLY CHARTS</div>
-        <div style="font-size:12px;color:var(--gray)">Last 7 days · scroll to see each chart</div>
+        <div style="font-size:12px;color:var(--gray)">Last 7 days</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--cyan);" onclick="openChartTargets()">🎯 Edit Targets</button>
+        <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--cyan);" onclick="openChartStats()">📊 Statistics</button>
         <button class="btn btn-purple btn-sm" onclick="renderCharts()">🔄 Refresh</button>
       </div>
     </div>
   </div>
+
   <div id="charts-empty" style="display:none;text-align:center;padding:60px;color:var(--gray)">
     <div style="font-size:40px;margin-bottom:12px">📊</div>
     <div style="font-size:14px">No log data yet.<br>Submit your daily log to see charts.</div>
   </div>
+
   <div id="charts-main" style="display:none">
-    <div class="ch-stat-grid" id="ch-stat-grid"></div>
-    <div class="ch-tier-strip" id="ch-tier-strip"></div>
-    <div class="ch-chart-card" id="chc-progress">
-      <div class="ch-chart-header">
-        <div class="ch-chart-title" style="color:var(--purple)">📐 Daily Progress %</div>
-        <div style="display:flex;align-items:center">
+    <div class="ch-chart-grid" id="ch-chart-grid">
+      <div class="ch-chart-card" id="chc-progress">
+        <div class="ch-chart-header">
+          <div class="ch-chart-title" style="color:var(--purple)">📐 Progress %</div>
           <div class="ch-chart-meta" id="ch-avg-progress"></div>
         </div>
+        <div class="ch-chart-body" id="chb-progress"><canvas id="chart-progress"></canvas></div>
       </div>
-      <div class="ch-chart-body open" id="chb-progress"><canvas id="chart-progress"></canvas></div>
-    </div>
-    <div class="ch-chart-card" id="chc-xp">
-      <div class="ch-chart-header">
-        <div class="ch-chart-title" style="color:var(--cyan)">⚡ Daily XP</div>
-        <div style="display:flex;align-items:center">
+      <div class="ch-chart-card" id="chc-xp">
+        <div class="ch-chart-header">
+          <div class="ch-chart-title" style="color:var(--cyan)">⚡ XP</div>
           <div class="ch-chart-meta" id="ch-avg-xp"></div>
         </div>
+        <div class="ch-chart-body" id="chb-xp"><canvas id="chart-xp"></canvas></div>
       </div>
-      <div class="ch-chart-body open" id="chb-xp"><canvas id="chart-xp"></canvas></div>
-    </div>
-    <div class="ch-chart-card" id="chc-study">
-      <div class="ch-chart-header">
-        <div class="ch-chart-title" style="color:var(--orange)">📚 Study Hours</div>
-        <div style="display:flex;align-items:center">
+      <div class="ch-chart-card" id="chc-study">
+        <div class="ch-chart-header">
+          <div class="ch-chart-title" style="color:var(--orange)">📚 Study h</div>
           <div class="ch-chart-meta" id="ch-avg-study"></div>
         </div>
+        <div class="ch-chart-body" id="chb-study"><canvas id="chart-study"></canvas></div>
       </div>
-      <div class="ch-chart-body open" id="chb-study"><canvas id="chart-study"></canvas></div>
-    </div>
-    <div class="ch-chart-card" id="chc-missions">
-      <div class="ch-chart-header">
-        <div class="ch-chart-title" style="color:var(--yellow)">✅ Missions</div>
-        <div style="display:flex;align-items:center">
+      <div class="ch-chart-card" id="chc-missions">
+        <div class="ch-chart-header">
+          <div class="ch-chart-title" style="color:var(--yellow)">✅ Missions</div>
           <div class="ch-chart-meta" id="ch-avg-missions"></div>
         </div>
+        <div class="ch-chart-body" id="chb-missions"><canvas id="chart-missions"></canvas></div>
       </div>
-      <div class="ch-chart-body open" id="chb-missions"><canvas id="chart-missions"></canvas></div>
     </div>
+  </div>
+</div>
+
+<!-- STATS OVERLAY -->
+<div id="ch-stats-overlay">
+  <div id="ch-stats-topbar">
+    <div id="ch-stats-topbar-title">📊 Statistics</div>
+    <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--cyan);margin-right:6px;" onclick="openChartTargets()">🎯 Edit Targets</button>
+    <button id="ch-stats-close-btn" onclick="closeChartStats()">✕</button>
+  </div>
+  <div id="ch-stats-scroll">
+    <div class="ch-stat-grid" id="ch-stat-grid"></div>
+    <div class="ch-tier-strip" id="ch-tier-strip"></div>
   </div>
 </div>
 
@@ -4470,6 +4484,88 @@ function getChartTargets(){
 }
 function saveChartTargets(t){localStorage.setItem('chartTargets',JSON.stringify(t));}
 
+function openChartStats(){
+  const ov=document.getElementById('ch-stats-overlay');
+  if(ov) ov.classList.add('open');
+  // populate if we have data
+  if(window._chLastData) _chRenderStats(window._chLastData);
+}
+function closeChartStats(){
+  const ov=document.getElementById('ch-stats-overlay');
+  if(ov) ov.classList.remove('open');
+}
+
+function _chRenderStats(d){
+  const {avgXP,avgStudy,avgMiss,avgProg,bestXP,bestStudy,totalXP,loggedCount,tierCounts}=d.meta;
+  const tgt=getChartTargets();
+
+  const statGrid=document.getElementById('ch-stat-grid');
+  statGrid.innerHTML='';
+  const stats=[
+    {lbl:'AVG PROGRESS',val:avgProg,unit:'%',color:'#6c5ce7',sub:`Target: ${tgt.progress}% · Best: ${d.meta.bestProg}%`,tgtPct:Math.min(1,parseFloat(avgProg)/tgt.progress)},
+    {lbl:'AVG XP/DAY',val:avgXP,unit:'xp',color:'#00d2a0',sub:`Target: ${tgt.xp} · Best: ${bestXP} XP`,tgtPct:Math.min(1,avgXP/tgt.xp)},
+    {lbl:'AVG STUDY',val:avgStudy,unit:'h',color:'#ff6348',sub:`Target: ${tgt.study}h · Best: ${bestStudy}h`,tgtPct:Math.min(1,parseFloat(avgStudy)/tgt.study)},
+    {lbl:'AVG MISSIONS',val:avgMiss,unit:'',color:'#ffd93d',sub:`Target: ${tgt.missions} · Total: ${d.missData.reduce((a,b)=>a+b,0)}`,tgtPct:Math.min(1,parseFloat(avgMiss)/tgt.missions)},
+    {lbl:'TOTAL XP',val:totalXP,unit:'',color:'#74b9ff',sub:`Target: ${tgt.totalXP} · ${loggedCount} days`,tgtPct:Math.min(1,totalXP/tgt.totalXP)},
+    {lbl:'DAYS LOGGED',val:loggedCount,unit:'/7',color:'#a033d6',sub:`${7-loggedCount} missing`,tgtPct:loggedCount/7},
+  ];
+  stats.forEach(s=>{
+    const div=document.createElement('div');
+    div.className='ch-stat-card';
+    div.style.setProperty('--ch-accent',s.color);
+    const hitTarget=s.tgtPct>=1;
+    // ring fill = tgtPct capped at 1.0 (exceeding target = full ring, no break)
+    const ringPct=Math.min(1,s.tgtPct);
+    div.innerHTML=`
+      <div class="ch-ring-wrap">
+        <canvas width="72" height="72" data-pct="${ringPct}" data-color="${s.color}" data-hit="${hitTarget}"></canvas>
+        <div class="ch-ring-val">
+          <div class="ch-ring-num" style="color:${hitTarget?'#00d2a0':s.color}">${s.val}</div>
+          <div class="ch-ring-unit">${s.unit}</div>
+        </div>
+      </div>
+      <div class="ch-stat-lbl">${s.lbl}</div>
+      <div class="ch-stat-sub">${s.sub}</div>`;
+    statGrid.appendChild(div);
+  });
+
+  requestAnimationFrame(()=>{
+    statGrid.querySelectorAll('canvas[data-pct]').forEach(c=>{
+      const pct=parseFloat(c.dataset.pct); // already capped at 1
+      const hit=c.dataset.hit==='true';
+      const col=hit?'#00d2a0':c.dataset.color;
+      const dpr=window.devicePixelRatio||1;
+      const sz=72;
+      c.width=sz*dpr;c.height=sz*dpr;
+      c.style.width=sz+'px';c.style.height=sz+'px';
+      const ctx=c.getContext('2d');
+      ctx.scale(dpr,dpr);
+      const cx=sz/2,cy=sz/2,r=30,lw=6;
+      const bgCol=getComputedStyle(document.documentElement).getPropertyValue('--bg4').trim()||'#2d2d44';
+      ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,Math.PI*2-Math.PI/2);
+      ctx.strokeStyle=bgCol;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+      if(pct>0){
+        const endAngle=(Math.PI*2*pct)-Math.PI/2;
+        ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,endAngle);
+        ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+      }
+    });
+
+    // Tier strip
+    const strip=document.getElementById('ch-tier-strip');
+    strip.innerHTML='';
+    [{t:'S',c:'#a033d6'},{t:'A',c:'#74b9ff'},{t:'B',c:'#00d2a0'},{t:'C',c:'#ffa502'},{t:'D',c:'#ff6348'},{t:'F',c:'#ff3838'}]
+    .forEach(({t,c})=>{
+      const n=tierCounts[t]||0;
+      const div=document.createElement('div');
+      div.className='ch-tier-pip';
+      div.style.borderColor=n>0?c+'66':'var(--border)';
+      div.innerHTML=`<div class="ch-tier-pip-val" style="color:${n>0?c:'var(--gray)'}">${n}</div><div class="ch-tier-pip-lbl">${t}-TIER</div>`;
+      strip.appendChild(div);
+    });
+  });
+}
+
 function openChartTargets(){
   const t=getChartTargets();
   showModal('🎯 Edit Targets',`
@@ -4493,7 +4589,9 @@ function openChartTargets(){
       missions:parseFloat(document.getElementById('ct-missions').value)||30,
       totalXP:parseFloat(document.getElementById('ct-totalxp').value)||5000,
     };
-    saveChartTargets(nt);closeModal();renderCharts();toast('🎯 Targets saved!');
+    saveChartTargets(nt);closeModal();renderCharts();
+    if(document.getElementById('ch-stats-overlay')?.classList.contains('open')&&window._chLastData)_chRenderStats(window._chLastData);
+    toast('🎯 Targets saved!');
   }},{txt:'Cancel',cls:'',fn:closeModal}]);
 }
 
@@ -4516,7 +4614,6 @@ function renderCharts(){
   main.style.display=hasData?'block':'none';
   if(!hasData)return;
 
-  const tgt=getChartTargets();
   const loggedCount=days.filter(dk=>weekly_data[dk]&&typeof weekly_data[dk]==='object').length||1;
   const avgXP=Math.round(xpData.reduce((a,b)=>a+b,0)/loggedCount);
   const avgStudy=(studyData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(1);
@@ -4524,102 +4621,27 @@ function renderCharts(){
   const avgProg=(pData.reduce((a,b)=>a+b,0)/loggedCount).toFixed(1);
   const bestXP=Math.max(...xpData);
   const bestStudy=Math.max(...studyData);
+  const bestProg=Math.max(...pData);
   const totalXP=xpData.reduce((a,b)=>a+b,0);
-
-  // Tier day counts
   const tierCounts={F:0,D:0,C:0,B:0,A:0,S:0};
-  Object.keys(tierCounts).forEach(k=>tierCounts[k]=0);
   days.forEach((dk,i)=>{if(weekly_data[dk])tierCounts[getTier(pData[i]).t]++;});
 
-  // ── Stat ring cards ──────────────────────
-  const statGrid=document.getElementById('ch-stat-grid');
-  statGrid.innerHTML='';
-  const stats=[
-    {lbl:'AVG PROGRESS',val:avgProg,unit:'%',max:100,color:'#6c5ce7',sub:`Target: ${tgt.progress}% · Best: ${Math.max(...pData)}%`,tgtPct:Math.min(1,parseFloat(avgProg)/tgt.progress)},
-    {lbl:'AVG XP/DAY',val:avgXP,unit:'xp',max:Math.max(tgt.xp*1.5,bestXP),color:'#00d2a0',sub:`Target: ${tgt.xp} · Best: ${bestXP} XP`,tgtPct:Math.min(1,avgXP/tgt.xp)},
-    {lbl:'AVG STUDY',val:avgStudy,unit:'h',max:Math.max(tgt.study*1.5,bestStudy,12),color:'#ff6348',sub:`Target: ${tgt.study}h · Best: ${bestStudy}h`,tgtPct:Math.min(1,parseFloat(avgStudy)/tgt.study)},
-    {lbl:'AVG MISSIONS',val:avgMiss,unit:'',max:Math.max(tgt.missions*1.5,Math.max(...missData),10),color:'#ffd93d',sub:`Target: ${tgt.missions} · Total: ${missData.reduce((a,b)=>a+b,0)}`,tgtPct:Math.min(1,parseFloat(avgMiss)/tgt.missions)},
-    {lbl:'TOTAL XP',val:totalXP,unit:'',max:Math.max(tgt.totalXP,totalXP*1.1),color:'#74b9ff',sub:`Target: ${tgt.totalXP} · ${loggedCount} days`,tgtPct:Math.min(1,totalXP/tgt.totalXP)},
-    {lbl:'DAYS LOGGED',val:loggedCount,unit:'/7',max:7,color:'#a033d6',sub:`${7-loggedCount} missing`,tgtPct:loggedCount/7},
-  ];
-  stats.forEach(s=>{
-    const div=document.createElement('div');
-    div.className='ch-stat-card';
-    div.style.setProperty('--ch-accent',s.color);
-    const pct=Math.min(1,parseFloat(s.val)/s.max);
-    const hitTarget=s.tgtPct>=1;
-    div.innerHTML=`
-      <div class="ch-ring-wrap">
-        <canvas width="72" height="72" data-pct="${pct}" data-color="${s.color}" data-tgt-pct="${s.tgtPct}" data-hit="${hitTarget}"></canvas>
-        <div class="ch-ring-val">
-          <div class="ch-ring-num" style="color:${hitTarget?'#00d2a0':s.color}">${s.val}</div>
-          <div class="ch-ring-unit">${s.unit}</div>
-        </div>
-      </div>
-      <div class="ch-stat-lbl">${s.lbl}</div>
-      <div class="ch-stat-sub">${s.sub}</div>`;
-    statGrid.appendChild(div);
-  });
-
-  // Draw rings after layout
+  // Update chart header meta labels
   requestAnimationFrame(()=>{
-    statGrid.querySelectorAll('canvas[data-pct]').forEach(c=>{
-      const pct=parseFloat(c.dataset.pct);
-      const tgtPct=parseFloat(c.dataset.tgtPct||'1');
-      const hit=c.dataset.hit==='true';
-      const col=hit?'#00d2a0':c.dataset.color;
-      const dpr=window.devicePixelRatio||1;
-      const sz=72;
-      c.width=sz*dpr;c.height=sz*dpr;
-      c.style.width=sz+'px';c.style.height=sz+'px';
-      const ctx=c.getContext('2d');
-      ctx.scale(dpr,dpr);
-      const cx=sz/2,cy=sz/2,r=30,lw=6;
-      const bgCol=getComputedStyle(document.documentElement).getPropertyValue('--bg4').trim()||'#2d2d44';
-      // track
-      ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,Math.PI*2-Math.PI/2);
-      ctx.strokeStyle=bgCol;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
-      // target marker tick
-      if(tgtPct<1){
-        const tAngle=(Math.PI*2*tgtPct)-Math.PI/2;
-        const tx=cx+Math.cos(tAngle)*r,ty=cy+Math.sin(tAngle)*r;
-        ctx.beginPath();ctx.arc(tx,ty,3,0,Math.PI*2);
-        ctx.fillStyle=c.dataset.color+'aa';ctx.fill();
-      }
-      // fill
-      if(pct>0){
-        ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,(Math.PI*2*pct)-Math.PI/2);
-        ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
-      }
-    });
-
-    // ── Tier pip strip ──────────────────────
-    const strip=document.getElementById('ch-tier-strip');
-    strip.innerHTML='';
-    [
-      {t:'S',c:'#a033d6'},{t:'A',c:'#74b9ff'},{t:'B',c:'#00d2a0'},
-      {t:'C',c:'#ffa502'},{t:'D',c:'#ff6348'},{t:'F',c:'#ff3838'}
-    ].forEach(({t,c})=>{
-      const n=tierCounts[t]||0;
-      const div=document.createElement('div');
-      div.className='ch-tier-pip';
-      div.style.borderColor=n>0?c+'66':'var(--border)';
-      div.innerHTML=`<div class="ch-tier-pip-val" style="color:${n>0?c:'var(--gray)'}">${n}</div><div class="ch-tier-pip-lbl">${t}-TIER</div>`;
-      strip.appendChild(div);
-    });
-
-    // ── Meta labels for chart headers ───────
     document.getElementById('ch-avg-progress').textContent=`avg ${avgProg}%`;
-    document.getElementById('ch-avg-xp').textContent=`avg ${avgXP} XP`;
+    document.getElementById('ch-avg-xp').textContent=`avg ${avgXP}`;
     document.getElementById('ch-avg-study').textContent=`avg ${avgStudy}h`;
     document.getElementById('ch-avg-missions').textContent=`avg ${avgMiss}`;
-
-    // Draw all charts (always visible)
     _chRedrawOpen(labels,pData,xpData,studyData,missData);
   });
 
-  // store for redraw
-  window._chLastData={labels,pData,xpData,studyData,missData};
+  // Store for redraw + stats overlay
+  const meta={avgXP,avgStudy,avgMiss,avgProg,bestXP,bestStudy,bestProg,totalXP,loggedCount,tierCounts};
+  window._chLastData={labels,pData,xpData,studyData,missData,meta};
+
+  // If stats overlay is open, refresh it too
+  if(document.getElementById('ch-stats-overlay')?.classList.contains('open'))
+    _chRenderStats(window._chLastData);
 }
 
 function _chRedrawOpen(labels,pData,xpData,studyData,missData){
@@ -5906,6 +5928,8 @@ function colRevealNext() {
   window.drawBarChart=drawBarChart;
   window.openChartTargets=openChartTargets;
   window.getChartTargets=getChartTargets;
+  window.openChartStats=openChartStats;
+  window.closeChartStats=closeChartStats;
 
   // ── Boot: show home screen and render initial UI ──
   updateUI();
