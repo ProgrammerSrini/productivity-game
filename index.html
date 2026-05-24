@@ -909,6 +909,36 @@ select{-webkit-appearance:none;appearance:none;}
   <div id="ach-list" class="ach-grid"></div>
 </div>
 
+<!-- ACHIEVEMENT EDITOR OVERLAY -->
+<div id="ach-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:400;align-items:flex-start;justify-content:center;padding:14px;backdrop-filter:blur(4px);overflow-y:auto;">
+  <div style="background:var(--bg3);border:1px solid var(--yellow);border-radius:14px;padding:22px;max-width:580px;width:100%;margin:auto;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="font-family:'Inter',sans-serif;font-size:17px;font-weight:700;color:var(--yellow);letter-spacing:.3px;">🏆 EDIT ACHIEVEMENTS</div>
+      <button onclick="_closeAchOverlay()" style="background:transparent;border:1px solid var(--border);color:var(--gray);border-radius:6px;width:34px;height:34px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;">
+      <button id="ach-tab-streaks" onclick="_achSwitchTab('streaks')"
+        style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--yellow);background:var(--yellow);color:#000;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:.15s;">
+        📅 MISSION STREAKS
+      </button>
+      <button id="ach-tab-custom" onclick="_achSwitchTab('custom')"
+        style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--gray);font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:.15s;">
+        ⚡ CUSTOM
+      </button>
+    </div>
+    <!-- Body -->
+    <div id="ach-editor-body" style="max-height:calc(100vh - 260px);overflow-y:auto;padding-right:4px;"></div>
+    <!-- Footer -->
+    <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
+      <button onclick="saveAchievementEdits()" style="flex:2;padding:12px;background:var(--yellow);border:none;border-radius:8px;color:#000;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;">💾 SAVE ALL</button>
+      <button onclick="if(confirm('Reset to defaults?')){S.set('custom_achievements',null);Object.keys(ACH_LIST).forEach(k=>delete ACH_LIST[k]);Object.assign(ACH_LIST,ACH_LIST_DEFAULT);_closeAchOverlay();renderAchievements();toast('Reset to defaults.');}" style="flex:1;padding:12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--gray);font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">↺ Reset</button>
+      <button onclick="_closeAchOverlay()" style="flex:1;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--gray);font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- STREAKS -->
 <div id="screen-streaks" class="screen">
   <div class="card">
@@ -2623,22 +2653,38 @@ function deleteBoss(idx){
 function renderAchievements(){
   let claimed=0,xpEarned=0;
   const grid=document.getElementById('ach-list');grid.innerHTML='';
-  Object.entries(ACH_LIST).forEach(([name,xp])=>{
+  // Sort: group by mission name, then by days ascending; claimed go last
+  function _achSortKey(name){
+    const m=name.match(/^(.+) — (\d+) day streak$/);
+    return m?[m[1],parseInt(m[2])]:[name,0];
+  }
+  const entries=Object.entries(ACH_LIST);
+  const unclaimed=entries.filter(([n])=>(achievements[n]||{}).status!=='claimed');
+  const claimedArr=entries.filter(([n])=>(achievements[n]||{}).status==='claimed');
+  const sortFn=(a,b)=>{const[an,ad]=_achSortKey(a[0]);const[bn,bd]=_achSortKey(b[0]);return an<bn?-1:an>bn?1:ad-bd;};
+  [...unclaimed.sort(sortFn),...claimedArr.sort(sortFn)].forEach(([name,reward])=>{
     const isClaimed=(achievements[name]||{}).status==='claimed';
-    if(isClaimed){claimed++;xpEarned+=xp;}
+    if(isClaimed){claimed++;xpEarned+=reward;}
     const btn=document.createElement('button');
     btn.className='ach-btn'+(isClaimed?' claimed':'');
-    btn.innerHTML=`<div>${isClaimed?'🏆 ':''} ${name}</div><div style="font-size:13px;color:var(--gray);margin-top:3px">+${xp.toLocaleString()} XP</div>`;
-    btn.onclick=()=>claimAchievement(name,xp);
+    btn.innerHTML=`<div>${isClaimed?'🏆 ':''} ${name}</div><div style="font-size:13px;color:var(--gray);margin-top:3px">+${reward.toLocaleString()} XP & 💰</div>`;
+    btn.onclick=()=>claimAchievement(name,reward);
     grid.appendChild(btn);
   });
   document.getElementById('a-claimed').textContent=claimed;
   document.getElementById('a-xp-earned').textContent=xpEarned.toLocaleString();
 }
-function claimAchievement(name,xp){
+function claimAchievement(name,reward){
   if((achievements[name]||{}).status==='claimed'){toast('Already claimed!');return;}
-  showModal('Claim Achievement?',`<strong>${name}</strong><br><br>Did you HONESTLY earn this?<br>+${xp.toLocaleString()} XP`,[
-    {txt:'YES, I EARNED IT',cls:'btn-yellow',fn:()=>{const baseCash=Math.round(xp*0.25);const ab=applyBonus(baseCash);achievements[name]={status:'claimed',xp};state.xp+=xp;state.cash+=ab.total;S.set('achievements',achievements);S.set('state',state);updateUI();renderAchievements();closeModal();toast(`🏆 ${name} — +${xp} XP +${ab.total} 💰${ab.extra>0?' ('+ab.pct+'% badge bonus!)':''}`);}},
+  showModal('Claim Achievement?',`<strong>${name}</strong><br><br>Did you HONESTLY earn this?<br>+${reward.toLocaleString()} XP & +${reward.toLocaleString()} 💰`,[
+    {txt:'YES, I EARNED IT',cls:'btn-yellow',fn:()=>{
+      const ab=applyBonus(reward);
+      achievements[name]={status:'claimed',xp:reward};
+      state.xp+=reward;state.cash+=ab.total;
+      S.set('achievements',achievements);S.set('state',state);
+      updateUI();renderAchievements();closeModal();
+      toast(`🏆 ${name} — +${reward} XP +${ab.total} 💰${ab.extra>0?' ('+ab.pct+'% badge bonus!)':''}`);
+    }},
     {txt:'Cancel',cls:'btn-purple',fn:closeModal}
   ]);
 }
@@ -2780,100 +2826,215 @@ function saveMissionEdits(){
 }
 
 // ── ACHIEVEMENT EDITOR ──
+// Reward formula (XP AND cash): (missionXP × days) × (1 + days × 0.1)
+function _achReward(missionXP, days){
+  return Math.round(missionXP * days * days * 0.1);
+}
+
+// ── State for the overlay editor ──
+let _achEditorTab='streaks'; // 'streaks' | 'custom'
+// Pending changes: Set of achNames to ADD, Set to DELETE, plus new customs
+let _achPendingAdd=new Set();
+let _achPendingDel=new Set();
+
 function openAchievementEditor(){
-  honestyGate('edit achievements', ()=>showAchievementEditorPanel());
+  honestyGate('edit achievements', ()=>_openAchOverlay());
 }
 
-function showAchievementEditorPanel(){
+function _openAchOverlay(){
+  _achPendingAdd=new Set();
+  _achPendingDel=new Set();
+  const ov=document.getElementById('ach-editor-overlay');
+  if(ov){ov.style.display='flex';_achRenderTab();}
+}
+function _closeAchOverlay(){
+  const ov=document.getElementById('ach-editor-overlay');
+  if(ov)ov.style.display='none';
+}
+window._closeAchOverlay=_closeAchOverlay;
+
+function _achSwitchTab(tab){
+  _achEditorTab=tab;
+  ['streaks','custom'].forEach(t=>{
+    const btn=document.getElementById('ach-tab-'+t);
+    if(btn){
+      if(t===tab){btn.style.background='var(--yellow)';btn.style.color='#000';btn.style.borderColor='var(--yellow)';}
+      else{btn.style.background='transparent';btn.style.color='var(--gray)';btn.style.borderColor='var(--border)';}
+    }
+  });
+  _achRenderTab();
+}
+window._achSwitchTab=_achSwitchTab;
+
+function _achRenderTab(){
+  const body=document.getElementById('ach-editor-body');
+  if(!body)return;
+  if(_achEditorTab==='streaks') _achRenderStreaks(body);
+  else _achRenderCustom(body);
+}
+
+function _achRenderStreaks(body){
   const live=getLiveAchievements();
-  const entries=Object.entries(live);
-  const rows=entries.map(([name,xp],i)=>`
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border)" id="arow-${i}">
-      <input type="text" value="${name.replace(/"/g,'&quot;')}" id="aname-${i}"
-        style="flex:1;min-width:0;background:var(--bg4);border:1px solid var(--border);border-radius:4px;color:var(--white);font-family:'Inter',sans-serif;font-size:14px;padding:5px 8px;outline:none">
-      <input type="number" value="${xp}" id="axp-${i}" min="1" max="9999999"
-        style="width:80px;background:var(--bg4);border:1px solid var(--border);border-radius:4px;color:var(--yellow);font-family:'Inter',sans-serif;font-size:14px;padding:5px 8px;outline:none;text-align:center">
-      <span style="font-size:12px;color:var(--gray)">XP</span>
-      <button onclick="deleteAchRow(${i})" style="background:rgba(255,56,56,.15);border:1px solid rgba(255,56,56,.3);border-radius:4px;color:#ff4757;padding:4px 8px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif">✕</button>
-    </div>`).join('');
+  const DAYS=[2,3,4,5,6,7];
+  let html=`<div style="font-size:12px;color:var(--gray);margin-bottom:14px;">Click a day pill to <span style="color:var(--cyan)">add</span> or <span style="color:var(--red)">remove</span> that streak. 🏆 = claimed (locked).<br>Reward = <span style="color:var(--yellow)">base XP × days² × 0.1</span> — given as both XP & 💰.</div>`;
 
-  showModal(
-    '✏️ EDIT ACHIEVEMENTS',
-    `<div style="font-size:13px;color:var(--gray);margin-bottom:10px">Rename, change XP, delete, or add achievements.</div>
-     <div id="ach-editor-rows" style="max-height:340px;overflow-y:auto;padding-right:4px">${rows}</div>
-     <div style="display:flex;gap:6px;margin-top:10px;align-items:center">
-       <input type="text" id="new-ach-name" placeholder="New achievement name..."
-         style="flex:1;background:var(--bg4);border:1px solid var(--yellow);border-radius:4px;color:var(--white);font-family:'Inter',sans-serif;font-size:14px;padding:7px 10px;outline:none">
-       <input type="number" id="new-ach-xp" value="500" min="1" max="9999999"
-         style="width:80px;background:var(--bg4);border:1px solid var(--yellow);border-radius:4px;color:var(--yellow);font-family:'Inter',sans-serif;font-size:14px;padding:7px 8px;outline:none;text-align:center">
-       <span style="font-size:12px;color:var(--gray)">XP</span>
-       <button onclick="addAchRow()" style="background:var(--yellow);border:none;border-radius:4px;color:#000;padding:7px 12px;cursor:pointer;font-size:14px;font-weight:700;font-family:'Inter',sans-serif">+ Add</button>
-     </div>`,
-    [
-      {txt:'💾 Save All',cls:'btn-yellow',fn:saveAchievementEdits},
-      {txt:'↺ Reset to Default',cls:'btn-sm',fn:()=>{
-        if(confirm('Reset achievements to the original defaults?')){
-          S.set('custom_achievements',null);
-          Object.keys(ACH_LIST).forEach(k=>delete ACH_LIST[k]);
-          Object.assign(ACH_LIST,ACH_LIST_DEFAULT);
-          closeModal();renderAchievements();toast('Achievements reset to defaults.');
-        }
-      }},
-      {txt:'Cancel',cls:'btn-purple',fn:closeModal}
-    ]
-  );
+  Object.entries(DAILY_LIST).forEach(([mission,mxp])=>{
+    html+=`<div style="background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+      <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:10px;">${mission} <span style="font-size:11px;color:var(--gray);font-weight:400">base ${mxp} XP</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">`;
+    DAYS.forEach(d=>{
+      const achName=`${mission} — ${d} day streak`;
+      const reward=_achReward(mxp,d);
+      const existsInLive=live[achName]!==undefined;
+      const pendingAdd=_achPendingAdd.has(achName);
+      const pendingDel=_achPendingDel.has(achName);
+      const claimed=(achievements[achName]||{}).status==='claimed';
+      // effective state: exists if (existsInLive || pendingAdd) && !pendingDel
+      const active=(existsInLive||pendingAdd)&&!pendingDel;
+      let bg,border,color,label;
+      if(claimed){bg='rgba(255,217,61,.18)';border='var(--yellow)';color='var(--yellow)';label=`${d}d 🏆`;}
+      else if(active){bg='rgba(0,210,160,.15)';border='var(--cyan)';color='var(--cyan)';label=`${d}d ✓`;}
+      else{bg='transparent';border='var(--border)';color='var(--gray)';label=`${d}d`;}
+      const onclick=claimed?'':`onclick="_achToggleStreak('${mission.replace(/'/g,"\\'")}',${d},${mxp})"`;
+      const cursor=claimed?'default':'pointer';
+      html+=`<div ${onclick} style="cursor:${cursor};border:1px solid ${border};background:${bg};border-radius:8px;padding:7px 10px;text-align:center;transition:.15s;min-width:52px;">
+        <div style="font-size:12px;font-weight:700;color:${color}">${label}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">+${reward.toLocaleString()}</div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+
+  body.innerHTML=html;
+}
+window._achToggleStreak=function(mission,days,mxp){
+  const achName=`${mission} — ${days} day streak`;
+  const live=getLiveAchievements();
+  const existsInLive=live[achName]!==undefined;
+  const pendingAdd=_achPendingAdd.has(achName);
+  const pendingDel=_achPendingDel.has(achName);
+  const active=(existsInLive||pendingAdd)&&!pendingDel;
+  if(active){
+    // Turn off
+    if(existsInLive)_achPendingDel.add(achName);
+    _achPendingAdd.delete(achName);
+  } else {
+    // Turn on
+    _achPendingAdd.add(achName);
+    _achPendingDel.delete(achName);
+  }
+  _achRenderTab();
+};
+
+function _achRenderCustom(body){
+  const live=getLiveAchievements();
+  // Custom = achievements that don't match the streak pattern
+  const streakPattern=/^.+ — \d+ day streak$/;
+  const customs=Object.entries(live).filter(([n])=>!streakPattern.test(n));
+  let html=`<div style="font-size:12px;color:var(--gray);margin-bottom:14px;">Custom achievements not tied to missions. You set the reward (given as both XP & 💰).</div>`;
+
+  // Add form
+  html+=`<div style="background:var(--bg4);border:1px solid var(--cyan);border-radius:10px;padding:14px;margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:700;color:var(--cyan);margin-bottom:10px;letter-spacing:.3px;">➕ ADD CUSTOM</div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--gray);margin-bottom:4px;letter-spacing:.3px;">NAME</div>
+      <input id="ach-custom-name" type="text" placeholder="e.g. Read 10 books"
+        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'Inter',sans-serif;font-size:13px;padding:9px 12px;outline:none;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--gray);margin-bottom:4px;letter-spacing:.3px;">REWARD (XP & 💰)</div>
+      <input id="ach-custom-reward" type="number" min="1" value="500" placeholder="500"
+        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--yellow);font-family:'Inter',sans-serif;font-size:13px;padding:9px 12px;outline:none;text-align:left;">
+    </div>
+    <button onclick="_achAddCustom()" style="width:100%;background:var(--cyan);border:none;border-radius:6px;color:#000;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;padding:10px;cursor:pointer;letter-spacing:.3px;">+ ADD</button>
+  </div>`;
+
+  // Existing customs list
+  if(!customs.length && !_achPendingAdd.size){
+    html+=`<div style="font-size:13px;color:var(--gray);text-align:center;padding:20px 0;">No custom achievements yet.</div>`;
+  } else {
+    // Also show pending custom adds
+    const pendingCustoms=[..._achPendingAdd].filter(n=>!n.match(/^.+ — \d+ day streak$/));
+    const allCustoms=[...customs.map(([n,r])=>({name:n,reward:r,pending:false})),...pendingCustoms.map(n=>({name:n,reward:_achPendingCustomRewards[n]||0,pending:true}))];
+    allCustoms.forEach(({name,reward,pending})=>{
+      if(_achPendingDel.has(name))return; // hidden
+      const claimed=(achievements[name]||{}).status==='claimed';
+      const claimedTag=claimed?`<span style="font-size:11px;background:rgba(255,217,61,.15);border:1px solid var(--yellow);color:var(--yellow);border-radius:4px;padding:1px 6px;margin-left:6px;">🏆 claimed</span>`:'';
+      const pendingTag=pending?`<span style="font-size:11px;background:rgba(0,210,160,.12);border:1px solid var(--cyan);color:var(--cyan);border-radius:4px;padding:1px 6px;margin-left:6px;">new</span>`:'';
+      const delBtn=claimed?'':`<button onclick="_achDelCustom('${name.replace(/'/g,"\\'")}')" style="background:rgba(255,56,56,.15);border:1px solid rgba(255,56,56,.3);border-radius:5px;color:var(--red);padding:5px 10px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;flex-shrink:0;">🗑</button>`;
+      html+=`<div style="display:flex;align-items:center;gap:10px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--white);">${name}${claimedTag}${pendingTag}</div>
+          <div style="font-size:12px;color:var(--yellow);margin-top:3px;">+${reward.toLocaleString()} XP & 💰</div>
+        </div>
+        ${delBtn}
+      </div>`;
+    });
+  }
+  body.innerHTML=html;
 }
 
-function deleteAchRow(i){
-  const row=document.getElementById('arow-'+i);
-  if(row)row.style.display='none';
-  const nameEl=document.getElementById('aname-'+i);
-  if(nameEl)nameEl.dataset.deleted='1';
-}
-
-function addAchRow(){
-  const nameEl=document.getElementById('new-ach-name');
-  const xpEl=document.getElementById('new-ach-xp');
+let _achPendingCustomRewards={};
+window._achAddCustom=function(){
+  const nameEl=document.getElementById('ach-custom-name');
+  const rewEl=document.getElementById('ach-custom-reward');
   const name=(nameEl?nameEl.value.trim():'');
-  const xp=parseInt(xpEl?xpEl.value:500)||500;
-  if(!name){toast('Enter an achievement name!');return;}
-  const rows=document.getElementById('ach-editor-rows');
-  if(!rows)return;
-  const existing=rows.querySelectorAll('[id^="arow-"]').length;
-  const i=existing;
-  const div=document.createElement('div');
-  div.id='arow-'+i;
-  div.style.cssText='display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border)';
-  div.innerHTML=`
-    <input type="text" value="${name.replace(/"/g,'&quot;')}" id="aname-${i}"
-      style="flex:1;min-width:0;background:var(--bg4);border:1px solid var(--border);border-radius:4px;color:var(--white);font-family:'Inter',sans-serif;font-size:14px;padding:5px 8px;outline:none">
-    <input type="number" value="${xp}" id="axp-${i}" min="1" max="9999999"
-      style="width:80px;background:var(--bg4);border:1px solid var(--border);border-radius:4px;color:var(--yellow);font-family:'Inter',sans-serif;font-size:14px;padding:5px 8px;outline:none;text-align:center">
-    <span style="font-size:12px;color:var(--gray)">XP</span>
-    <button onclick="deleteAchRow(${i})" style="background:rgba(255,56,56,.15);border:1px solid rgba(255,56,56,.3);border-radius:4px;color:#ff4757;padding:4px 8px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif">✕</button>`;
-  rows.appendChild(div);
+  const reward=parseInt(rewEl?rewEl.value:500)||500;
+  if(!name){toast('Enter a name!');return;}
+  const live=getLiveAchievements();
+  if(live[name]!==undefined||_achPendingAdd.has(name)){toast('Already exists!');return;}
+  _achPendingAdd.add(name);
+  _achPendingCustomRewards[name]=reward;
   if(nameEl)nameEl.value='';
-  if(xpEl)xpEl.value='500';
-}
+  if(rewEl)rewEl.value='500';
+  _achRenderTab();
+  toast(`✅ "${name}" added — save to confirm.`);
+};
+window._achDelCustom=function(name){
+  const live=getLiveAchievements();
+  if(live[name]!==undefined)_achPendingDel.add(name);
+  _achPendingAdd.delete(name);
+  delete _achPendingCustomRewards[name];
+  _achRenderTab();
+};
 
 function saveAchievementEdits(){
-  const rows=document.getElementById('ach-editor-rows');
-  if(!rows){closeModal();return;}
+  const live=getLiveAchievements();
   const newList={};
-  rows.querySelectorAll('[id^="arow-"]').forEach(row=>{
-    const idx=row.id.replace('arow-','');
-    const nameEl=document.getElementById('aname-'+idx);
-    const xpEl=document.getElementById('axp-'+idx);
-    if(!nameEl||nameEl.dataset.deleted==='1')return;
-    const name=nameEl.value.trim();
-    const xp=parseInt(xpEl?xpEl.value:500)||500;
-    if(name)newList[name]=xp;
+  const streakPattern=/^.+ — \d+ day streak$/;
+
+  // Keep existing streaks unless deleted
+  Object.entries(live).filter(([n])=>streakPattern.test(n)).forEach(([n,r])=>{
+    if(_achPendingDel.has(n)){
+      if((achievements[n]||{}).status==='claimed'){newList[n]=r;toast(`⚠️ "${n}" is claimed — kept.`);}
+    } else {newList[n]=r;}
   });
-  if(!Object.keys(newList).length){toast('Add at least one achievement!');return;}
+  // Add new streaks
+  [..._achPendingAdd].filter(n=>streakPattern.test(n)).forEach(n=>{
+    const m=n.match(/^(.+) — (\d+) day streak$/);
+    if(!m)return;
+    const mxp=DAILY_LIST[m[1]]||0;
+    const days=parseInt(m[2]);
+    newList[n]=_achReward(mxp,days);
+  });
+
+  // Keep existing customs unless deleted
+  Object.entries(live).filter(([n])=>!streakPattern.test(n)).forEach(([n,r])=>{
+    if(_achPendingDel.has(n)){
+      if((achievements[n]||{}).status==='claimed'){newList[n]=r;toast(`⚠️ "${n}" is claimed — kept.`);}
+    } else {newList[n]=r;}
+  });
+  // Add new customs
+  [..._achPendingAdd].filter(n=>!streakPattern.test(n)).forEach(n=>{
+    const r=_achPendingCustomRewards[n]||500;
+    newList[n]=r;
+  });
+
+  _achPendingAdd=new Set();_achPendingDel=new Set();_achPendingCustomRewards={};
   S.set('custom_achievements',newList);
   Object.keys(ACH_LIST).forEach(k=>delete ACH_LIST[k]);
   Object.assign(ACH_LIST,newList);
-  closeModal();renderAchievements();
+  _closeAchOverlay();renderAchievements();
   toast('✅ Achievements saved!');
 }
 
@@ -4800,9 +4961,6 @@ updateUI();
   window.addMissionRow=addMissionRow;
   window.saveMissionEdits=saveMissionEdits;
   window.openAchievementEditor=openAchievementEditor;
-  window.showAchievementEditorPanel=showAchievementEditorPanel;
-  window.deleteAchRow=deleteAchRow;
-  window.addAchRow=addAchRow;
   window.saveAchievementEdits=saveAchievementEdits;
   window.getTier=getTier;
   window.getEquippedBadge=getEquippedBadge;
