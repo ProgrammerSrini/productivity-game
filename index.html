@@ -150,8 +150,14 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 .week-table td{padding:10px;text-align:center;border-bottom:1px solid var(--border);font-size:13px;}
 
 /* TOAST */
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);opacity:0;background:var(--bg3);border:1px solid var(--cyan);border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;z-index:9000;transition:transform .3s,opacity .3s;max-width:320px;text-align:center;box-shadow:0 0 20px rgba(0,210,160,.3);}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);opacity:0;z-index:9000;transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .25s;pointer-events:none;max-width:min(360px,calc(100vw - 32px));}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+#toast-inner{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.04);backdrop-filter:blur(12px);}
+#toast-icon{font-size:22px;line-height:1;flex-shrink:0;}
+#toast-body{flex:1;min-width:0;}
+#toast-title{font-size:14px;font-weight:700;color:var(--white);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toast-sub{font-size:12px;color:var(--gray);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toast-accent{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0;min-height:28px;}
 @keyframes coach-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 select{-webkit-appearance:none;appearance:none;}
 /* COLLECTION */
@@ -272,6 +278,20 @@ select{-webkit-appearance:none;appearance:none;}
 #ht-today-btn:hover{border-color:var(--cyan);color:var(--cyan);}
 #ht-add-btn{padding:5px 14px;background:var(--purple);border:none;border-radius:6px;color:#fff;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap;flex-shrink:0;}
 #ht-add-btn:hover{filter:brightness(1.15);}
+#ht-stats-btn{padding:5px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--gray);font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap;flex-shrink:0;}
+#ht-stats-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+#ht-stats-btn.active{background:color-mix(in srgb,var(--cyan) 15%,var(--bg4));border-color:var(--cyan);color:var(--cyan);}
+/* stat cards */
+.ht-stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 18px;min-width:120px;text-align:center;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;}
+.ht-stat-val{font-family:'Inter',sans-serif;font-size:26px;font-weight:800;line-height:1;}
+.ht-stat-lbl{font-size:11px;color:var(--gray);margin-top:5px;font-weight:700;letter-spacing:.5px;}
+/* mini bar chart in stats */
+.ht-mini-chart{display:flex;align-items:flex-end;gap:3px;height:48px;margin-top:6px;position:relative;}
+.ht-mini-bar{flex:1;min-width:6px;border-radius:2px 2px 0 0;transition:.3s;min-height:2px;position:relative;z-index:1;}
+/* donut ring */
+.ht-donut-wrap{position:relative;width:70px;height:70px;flex-shrink:0;}
+.ht-donut-wrap svg{width:70px;height:70px;}
+.ht-donut-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-size:13px;font-weight:800;}
 #ht-close-btn{margin-left:auto;width:32px;height:32px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--gray);font-size:16px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 #ht-close-btn:hover{border-color:var(--red);color:var(--red);}
 
@@ -279,24 +299,24 @@ select{-webkit-appearance:none;appearance:none;}
 #ht-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;position:relative;}
 
 /* The table — width is set by JS to total days × cell-width */
-#ht-table{display:flex;flex-direction:column;min-height:100%;}
+#ht-table{display:flex;flex-direction:column;min-height:100%;min-width:100%;}
 
 /* Month separator — spans full table width, sticky on left so label stays visible */
 .ht-msep{
-  height:28px;flex-shrink:0;
+  height:30px;flex-shrink:0;
   display:flex;align-items:center;
-  background:color-mix(in srgb,var(--purple) 10%,var(--bg));
-  border-top:1px solid color-mix(in srgb,var(--purple) 35%,transparent);
-  border-bottom:1px solid color-mix(in srgb,var(--purple) 18%,transparent);
-  position:sticky;left:0;  /* label never scrolls off left */
+  background:color-mix(in srgb,var(--purple) 14%,var(--bg));
+  border-top:2px solid color-mix(in srgb,var(--purple) 50%,transparent);
+  border-bottom:1px solid color-mix(in srgb,var(--purple) 25%,transparent);
+  position:sticky;left:0;
   z-index:4;
 }
 .ht-msep-label{
   position:sticky;left:0;
   padding:0 12px;
-  font-family:'Inter',sans-serif;font-size:11px;font-weight:700;
-  letter-spacing:.6px;color:var(--purple);white-space:nowrap;
-  background:color-mix(in srgb,var(--purple) 10%,var(--bg));
+  font-family:'Inter',sans-serif;font-size:11px;font-weight:800;
+  letter-spacing:1.2px;color:var(--purple);white-space:nowrap;text-transform:uppercase;
+  background:color-mix(in srgb,var(--purple) 14%,var(--bg));
   height:100%;display:flex;align-items:center;
   min-width:150px;
 }
@@ -367,15 +387,24 @@ select{-webkit-appearance:none;appearance:none;}
   border-bottom:1px solid var(--border);
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  transition:background .12s;
+  transition:background .1s;
   user-select:none;
 }
-.ht-cell:hover{background:color-mix(in srgb,var(--purple) 16%,transparent);}
-.ht-cell.is-checked{background:color-mix(in srgb,var(--purple) 32%,transparent);}
-.ht-cell.is-checked::after{content:'✓';font-size:15px;font-weight:700;color:var(--white);text-shadow:0 1px 5px rgba(0,0,0,.7);}
-.ht-cell.is-today{border-left:1px solid color-mix(in srgb,var(--cyan) 55%,transparent);border-right:1px solid color-mix(in srgb,var(--cyan) 55%,transparent);}
-.ht-cell.is-today:not(.is-checked){background:color-mix(in srgb,var(--cyan) 8%,transparent);}
-.ht-cell.is-today:hover{background:color-mix(in srgb,var(--cyan) 18%,transparent);}
+.ht-cell:hover{background:color-mix(in srgb,var(--purple) 20%,transparent);}
+.ht-cell.is-checked{
+  background:var(--purple);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.15);
+}
+.ht-cell.is-checked::after{content:'✓';font-size:13px;font-weight:900;color:rgba(255,255,255,.9);}
+.ht-cell.is-today{
+  border-left:2px solid var(--cyan);
+  border-right:2px solid var(--cyan);
+}
+.ht-cell.is-today:not(.is-checked){background:color-mix(in srgb,var(--cyan) 10%,transparent);}
+.ht-cell.is-today.is-checked{background:var(--cyan);}
+.ht-cell.is-today.is-checked::after{color:rgba(0,0,0,.8);}
+.ht-cell.is-today:hover:not(.is-checked){background:color-mix(in srgb,var(--cyan) 22%,transparent);}
+.ht-cell.is-weekend:not(.is-checked):not(.is-today){background:color-mix(in srgb,var(--white) 3%,transparent);}
 
 </style>
 </head>
@@ -473,6 +502,7 @@ select{-webkit-appearance:none;appearance:none;}
     <button class="nav-btn active" onclick="navGoto('home')">🏠 Home</button>
     <button class="nav-btn" onclick="navGoto('missions')">✅ Missions</button>
     <button class="nav-btn" onclick="navGoto('log')">📝 Log</button>
+    <button class="nav-btn" onclick="htOpen();document.getElementById('nav-dropdown').classList.remove('open');">📅 Habit Tracker</button>
     <button class="nav-btn" onclick="navGoto('quickstart')">⚡ Quick Start</button>
     <div class="nav-divider"></div>
     <button class="nav-btn" onclick="navGoto('achievements')">🏆 Achievements</button>
@@ -556,15 +586,25 @@ select{-webkit-appearance:none;appearance:none;}
 <!-- MISSIONS -->
 <div id="screen-missions" class="screen">
   <div class="card">
-    <div class="card-title">✅ DAILY MISSIONS</div>
-    <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:13px;color:var(--gray)">Done: <strong id="miss-count" style="color:var(--cyan)">0/0</strong></span>
-      <span style="font-size:13px;color:var(--gray)">XP: <strong id="miss-xp-total" style="color:var(--yellow)">0</strong></span>
-      <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray);" onclick="htOpen()">📅 Habit Tracker</button>
-      <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray);margin-left:auto" onclick="openMissionEditor()">✏️ Edit Missions</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div class="card-title" style="margin-bottom:0;">✅ DAILY MISSIONS</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray);" onclick="htOpen()">📅 Tracker</button>
+        <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray);" onclick="openMissionEditor()">✏️ Edit</button>
+        <button class="btn btn-sm" id="mission-reorder-toggle-btn" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray);" onclick="toggleMissionDragMode()" title="Reorder missions">☰ Reorder</button>
+        <button id="mission-reorder-done-btn" style="display:none;" class="btn btn-sm btn-yellow" onclick="finishMissionDragMode()">✓ Done</button>
+      </div>
+    </div>
+    <!-- Progress bar -->
+    <div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray);margin-bottom:5px;">
+        <span>Done: <strong id="miss-count" style="color:var(--cyan)">0/0</strong></span>
+        <span>XP earned: <strong id="miss-xp-total" style="color:var(--yellow)">0</strong></span>
+      </div>
+      <div class="bar-wrap"><div class="bar-fill" id="miss-progress-bar" style="background:var(--cyan);width:0%"></div></div>
     </div>
   </div>
-  <div id="mission-list" class="mission-grid"></div>
+  <div id="mission-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;"></div>
 </div>
 
 <!-- HABIT TRACKER OVERLAY -->
@@ -574,8 +614,13 @@ select{-webkit-appearance:none;appearance:none;}
     <div id="ht-month-label">—</div>
     <button id="ht-nav-next" onclick="htNavMonth(1)">›</button>
     <button id="ht-today-btn" onclick="htGoToday()">⟳ Today</button>
-    <button id="ht-add-btn" onclick="htAddRow()">+ Add Mission</button>
+    <button id="ht-stats-btn" onclick="htToggleStats()">📊 Stats</button>
+    <button id="ht-add-btn" onclick="htAddRow()">+ Add</button>
     <button id="ht-close-btn" onclick="htClose()" title="Close">✕</button>
+  </div>
+  <!-- Stats panel (hidden by default) -->
+  <div id="ht-stats-panel" style="display:none;flex-shrink:0;background:var(--bg2,var(--bg));border-bottom:1px solid var(--border);padding:12px 14px;overflow-x:auto;">
+    <div id="ht-stats-inner" style="display:flex;gap:10px;align-items:stretch;min-width:max-content;"></div>
   </div>
   <div id="ht-scroll">
     <div id="ht-table"></div>
@@ -904,9 +949,14 @@ select{-webkit-appearance:none;appearance:none;}
       <div class="stat-box"><div class="stat-val" id="a-claimed" style="color:var(--yellow)">0</div><div class="stat-lbl">Claimed</div></div>
       <div class="stat-box"><div class="stat-val" id="a-xp-earned" style="color:var(--cyan)">0</div><div class="stat-lbl">XP Earned</div></div>
     </div>
-    <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray)" onclick="openAchievementEditor()">✏️ Edit Achievements</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-sm" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray)" onclick="openAchievementEditor()">✏️ Edit Achievements</button>
+      <button class="btn btn-sm" id="ach-reorder-toggle-btn" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray)" onclick="toggleAchPanelReorder()" title="Reorder panels">☰ Reorder</button>
+      <span id="ach-reorder-hint" style="display:none;font-size:12px;color:var(--orange);">Drag panels to reorder</span>
+      <button id="ach-reorder-done-btn" style="display:none;" class="btn btn-sm btn-yellow" onclick="finishAchPanelReorder()">✓ Done</button>
+    </div>
   </div>
-  <div id="ach-list" class="ach-grid"></div>
+  <div id="ach-list"></div>
 </div>
 
 <!-- ACHIEVEMENT EDITOR OVERLAY -->
@@ -933,7 +983,7 @@ select{-webkit-appearance:none;appearance:none;}
     <!-- Footer -->
     <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
       <button onclick="saveAchievementEdits()" style="flex:2;padding:12px;background:var(--yellow);border:none;border-radius:8px;color:#000;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;">💾 SAVE ALL</button>
-      <button onclick="if(confirm('Reset to defaults?')){S.set('custom_achievements',null);Object.keys(ACH_LIST).forEach(k=>delete ACH_LIST[k]);Object.assign(ACH_LIST,ACH_LIST_DEFAULT);_closeAchOverlay();renderAchievements();toast('Reset to defaults.');}" style="flex:1;padding:12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--gray);font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">↺ Reset</button>
+      <button onclick="resetAchievementsToDefault()" style="flex:1;padding:12px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--gray);font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">↺ Clear All</button>
       <button onclick="_closeAchOverlay()" style="flex:1;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--gray);font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
     </div>
   </div>
@@ -1591,7 +1641,7 @@ select{-webkit-appearance:none;appearance:none;}
     <div class="modal-btns" id="modal-btns"></div>
   </div>
 </div>
-<div id="toast"></div>
+<div id="toast"><div id="toast-inner"><div id="toast-accent"></div><div id="toast-icon"></div><div id="toast-body"><div id="toast-title"></div><div id="toast-sub"></div></div></div></div>
 
 <!-- LOADING OVERLAY: shown until Supabase auth resolves -->
 <div id="app-loading-overlay" style="position:fixed;inset:0;z-index:1100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
@@ -1678,7 +1728,34 @@ const S={
 };
 window._S = S;
 
+// Flush pending writes on page hide (fixes data loss on tab close)
+const _pendingWrites=new Map();
 async function _dbSet(key,value){
+  if(!window._supaUser)return;
+  if(_pendingWrites.has(key))clearTimeout(_pendingWrites.get(key));
+  const p=supa.from('discipline_data').upsert({user_id:window._supaUser.id,key,value:JSON.stringify(value)},{onConflict:'user_id,key'});
+  _pendingWrites.set(key,setTimeout(()=>_pendingWrites.delete(key),5000));
+  await p;
+}
+// On page hide: flush all critical keys via keepalive fetch
+window.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='hidden'||!window._supaUser||!window._userData)return;
+  const criticalKeys=['state','missions','achievements','streaks','gamble','boss','pass_data','weekly','logs',
+    'custom_missions','custom_achievements','ach_panel_order','mission_panel_order','ach_mission_order',
+    'streak_groups','streak_featured','last_week_key','ht_rows_v2','ht_checks_v2'];
+  criticalKeys.forEach(k=>{
+    if(window._userData[k]===undefined)return;
+    const rows=JSON.stringify([{user_id:window._supaUser.id,key:k,value:JSON.stringify(window._userData[k])}]);
+    fetch(`${SUPA_URL}/rest/v1/discipline_data`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'},
+      body:rows,
+      keepalive:true
+    }).catch(()=>{});
+  });
+});
+
+async function _dbSetBase(key,value){
   if(!window._supaUser)return;
   await supa.from('discipline_data').upsert({user_id:window._supaUser.id,key,value:JSON.stringify(value)},{onConflict:'user_id,key'});
 }
@@ -1786,7 +1863,56 @@ const BADGES=[
 
 // ── toast must be available before the auto-reset IIFE runs (it calls toast for boss/gamble/pawn) ──
 let toastTimer;
-function toast(msg,dur=2800){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),dur);}
+// toast(msg, dur) — msg can be a plain string OR {icon, title, sub, color}
+function toast(msg, dur=3000){
+  const el=document.getElementById('toast');
+  const iconEl=document.getElementById('toast-icon');
+  const titleEl=document.getElementById('toast-title');
+  const subEl=document.getElementById('toast-sub');
+  const accentEl=document.getElementById('toast-accent');
+  if(typeof msg==='object'&&msg.title){
+    iconEl.textContent=msg.icon||'';
+    titleEl.textContent=msg.title||'';
+    subEl.textContent=msg.sub||'';
+    subEl.style.display=msg.sub?'block':'none';
+    const col=msg.color||'var(--cyan)';
+    accentEl.style.background=col;
+    document.getElementById('toast-inner').style.borderColor=col+'55';
+  } else {
+    // Smart parse plain strings into icon+title+sub
+    const s=String(msg);
+    // Extract leading emoji as icon
+    const emojiMatch=s.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*/u);
+    const icon=emojiMatch?emojiMatch[0].trim():'';
+    const rest=emojiMatch?s.slice(emojiMatch[0].length):s;
+    // Split on ' — ' or ' | ' for sub-line
+    const sepIdx=rest.indexOf(' — ');
+    let title,sub;
+    if(sepIdx!==-1){title=rest.slice(0,sepIdx);sub=rest.slice(sepIdx+3);}
+    else{title=rest;sub='';}
+    // If title has +XP and +💰 and badge, split them
+    const rewardMatch=title.match(/^(\+[\d,]+ XP \+[\d,]+ 💰)(.*)/);
+    if(rewardMatch&&!sub){sub=rewardMatch[2].trim()||'';title=rewardMatch[1];}
+    iconEl.textContent=icon;
+    titleEl.textContent=title;
+    subEl.textContent=sub;
+    subEl.style.display=sub?'block':'none';
+    // Color based on content
+    let col='var(--cyan)';
+    if(s.includes('🏆')||s.includes('XP'))col='var(--yellow)';
+    else if(s.includes('❌')||s.includes('✗')||s.includes('Not enough')||s.includes('Too late')||s.includes('expired'))col='var(--red)';
+    else if(s.includes('🔒'))col='var(--orange)';
+    else if(s.includes('✅')||s.includes('saved')||s.includes('Saved'))col='var(--cyan)';
+    else if(s.includes('💰'))col='var(--yellow)';
+    accentEl.style.background=col;
+    document.getElementById('toast-inner').style.borderColor=col+'55';
+  }
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),dur);
+}
 
 // ═══════════════════════════════════════════
 // AUTO RESET ENGINE
@@ -1856,8 +1982,12 @@ function toast(msg,dur=2800){const el=document.getElementById('toast');el.textCo
   const lastWeekKey=S.get('last_week_key','');
   if(lastWeekKey!==wk){
     state.xp=0;
+    // Clear ALL claimed achievements (both mission streaks and custom)
     achievements={};
     S.set('achievements',achievements);
+    // Also reset missions status for fresh week
+    Object.keys(missions_status).forEach(k=>missions_status[k]='locked');
+    S.set('missions',missions_status);
     S.set('last_week_key',wk);
     S.set('state',state);
   }
@@ -2233,23 +2363,83 @@ document.addEventListener('click',function(e){
 // ═══════════════════════════════════════════
 function renderMissions(){
   const list=document.getElementById('mission-list');list.innerHTML='';
-  let count=0,xpTotal=0;
-  Object.entries(DAILY_LIST).forEach(([name,xp])=>{
+  let count=0,xpTotal=0,xpMax=0;
+  const cyanColor=getComputedStyle(document.documentElement).getPropertyValue('--cyan').trim()||'#00d2a0';
+  const yellowColor=getComputedStyle(document.documentElement).getPropertyValue('--yellow').trim()||'#ffd93d';
+
+  const isDragMode=window._missionDragMode||false;
+  list.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;';
+
+  // Apply saved mission order
+  const savedMissionOrder=S.get('mission_panel_order',null)||[];
+  const allMissions=Object.keys(DAILY_LIST);
+  const orderedMissions=[...allMissions].sort((a,b)=>{
+    const ai=savedMissionOrder.indexOf(a);const bi=savedMissionOrder.indexOf(b);
+    if(ai!==-1&&bi!==-1)return ai-bi;
+    if(ai!==-1)return -1;if(bi!==-1)return 1;
+    return allMissions.indexOf(a)-allMissions.indexOf(b);
+  });
+
+  orderedMissions.forEach(name=>{
+    const xp=DAILY_LIST[name];
     const done=missions_status[name]==='done';
     if(done){count++;xpTotal+=xp;}
-    const btn=document.createElement('button');
-    btn.className='mission-btn'+(done?' done':'');
-    btn.innerHTML=`<div>${name}</div><div class="mission-xp">+${xp} XP</div>`;
-    btn.onclick=()=>claimMission(name,xp);
-    list.appendChild(btn);
+    xpMax+=xp;
+
+    const panel=document.createElement('div');
+    panel.setAttribute('data-mission-name',name);
+    const panelColor=done?yellowColor:cyanColor;
+    panel.style.cssText=`background:color-mix(in srgb,${panelColor} ${done?'9%':'5%'},transparent);border:1.5px solid ${done?yellowColor:'var(--border)'};border-radius:12px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:.2s;${isDragMode?'cursor:grab;':done?'cursor:default;':'cursor:pointer;'}`;
+
+    if(!isDragMode&&!done){
+      panel.onmouseover=()=>panel.style.borderColor=cyanColor;
+      panel.onmouseout=()=>panel.style.borderColor='var(--border)';
+      panel.onclick=()=>claimMission(name,xp);
+    }
+
+    const leftSide=document.createElement('div');
+    leftSide.style.cssText='display:flex;align-items:center;gap:10px;flex:1;min-width:0;';
+    leftSide.innerHTML=`${isDragMode?'<span style="font-size:16px;color:var(--gray);flex-shrink:0;">\u2630</span>':done?'<span style="font-size:20px;flex-shrink:0;">\u2705</span>':'<span style="font-size:20px;flex-shrink:0;opacity:.4;">\u25cb</span>'}
+      <div style="min-width:0;">
+        <div style="font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:${done?yellowColor:'var(--white)'};line-height:1.3;word-break:break-word;${done?'text-decoration:line-through;opacity:.75;':''}">${name}</div>
+        <div style="font-size:12px;color:${done?yellowColor:cyanColor};font-weight:600;margin-top:2px;">${done?'\u2713 +'+xp+' XP earned':'+ '+xp+' XP'}</div>
+      </div>`;
+    panel.appendChild(leftSide);
+
+    if(isDragMode){
+      panel.draggable=true;
+      panel.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',name);panel.style.opacity='.5';});
+      panel.addEventListener('dragend',()=>{panel.style.opacity='1';});
+      panel.addEventListener('dragover',e=>{e.preventDefault();panel.style.outline='2px dashed var(--orange)';});
+      panel.addEventListener('dragleave',()=>{panel.style.outline='';});
+      panel.addEventListener('drop',e=>{
+        e.preventDefault();panel.style.outline='';
+        const draggedName=e.dataTransfer.getData('text/plain');
+        if(draggedName===name)return;
+        const cur=savedMissionOrder.length?[...savedMissionOrder]:[...allMissions];
+        allMissions.forEach(m=>{if(!cur.includes(m))cur.push(m);});
+        const fi=cur.indexOf(draggedName);const ti=cur.indexOf(name);
+        if(fi===-1||ti===-1)return;
+        cur.splice(fi,1);cur.splice(ti,0,draggedName);
+        S.set('mission_panel_order',cur);
+        renderMissions();
+      });
+    }
+
+    list.appendChild(panel);
   });
-  document.getElementById('miss-count').textContent=`${count}/${Object.keys(DAILY_LIST).length}`;
-  document.getElementById('miss-xp-total').textContent=xpTotal;
+
+  const total=Object.keys(DAILY_LIST).length;
+  document.getElementById('miss-count').textContent=`${count}/${total}`;
+  document.getElementById('miss-xp-total').textContent=xpTotal.toLocaleString();
+  const bar=document.getElementById('miss-progress-bar');
+  if(bar)bar.style.width=(total>0?Math.round(count/total*100):0)+'%';
 }
+
 function claimMission(name,xp){
   if(missions_status[name]==='done')return;
   showModal('Complete Mission?',`Did you genuinely complete:<br><br><strong>${name}</strong><br><br>+${xp} XP`,[
-    {txt:'YES ✅',cls:'btn-cyan',fn:()=>{missions_status[name]='done';state.daily_xp+=xp;state.xp+=xp;const mb=applyBonus(xp);state.cash+=mb.total;S.set('state',state);S.set('missions',missions_status);autoUpdateStreaks([name]);updateUI();renderMissions();toast(`+${xp} XP +${mb.total} 💰${mb.extra>0?' ('+mb.pct+'% badge bonus!)':''} — ${name}!`);closeModal();}},
+    {txt:'YES ✅',cls:'btn-cyan',fn:()=>{missions_status[name]='done';state.daily_xp+=xp;state.xp+=xp;const mb=applyBonus(xp);state.cash+=mb.total;S.set('state',state);S.set('missions',missions_status);autoUpdateStreaks([name]);updateUI();renderMissions();toast({icon:'✅',title:`+${xp} XP  +${mb.total} 💰`,sub:`${name}${mb.extra>0?' · '+mb.pct+'% badge bonus':''}`,color:'var(--cyan)'});closeModal();}},
     {txt:'Cancel',cls:'btn-purple',fn:closeModal}
   ]);
 }
@@ -2653,27 +2843,137 @@ function deleteBoss(idx){
 function renderAchievements(){
   let claimed=0,xpEarned=0;
   const grid=document.getElementById('ach-list');grid.innerHTML='';
-  // Sort: group by mission name, then by days ascending; claimed go last
-  function _achSortKey(name){
-    const m=name.match(/^(.+) — (\d+) day streak$/);
-    return m?[m[1],parseInt(m[2])]:[name,0];
-  }
-  const entries=Object.entries(ACH_LIST);
-  const unclaimed=entries.filter(([n])=>(achievements[n]||{}).status!=='claimed');
-  const claimedArr=entries.filter(([n])=>(achievements[n]||{}).status==='claimed');
-  const sortFn=(a,b)=>{const[an,ad]=_achSortKey(a[0]);const[bn,bd]=_achSortKey(b[0]);return an<bn?-1:an>bn?1:ad-bd;};
-  [...unclaimed.sort(sortFn),...claimedArr.sort(sortFn)].forEach(([name,reward])=>{
-    const isClaimed=(achievements[name]||{}).status==='claimed';
-    if(isClaimed){claimed++;xpEarned+=reward;}
-    const btn=document.createElement('button');
-    btn.className='ach-btn'+(isClaimed?' claimed':'');
-    btn.innerHTML=`<div>${isClaimed?'🏆 ':''} ${name}</div><div style="font-size:13px;color:var(--gray);margin-top:3px">+${reward.toLocaleString()} XP & 💰</div>`;
-    btn.onclick=()=>claimAchievement(name,reward);
-    grid.appendChild(btn);
+  const accentColor=getComputedStyle(document.documentElement).getPropertyValue('--purple').trim()||'#6c5ce7';
+  const cyanColor=getComputedStyle(document.documentElement).getPropertyValue('--cyan').trim()||'#00d2a0';
+  const yellowColor=getComputedStyle(document.documentElement).getPropertyValue('--yellow').trim()||'#ffd93d';
+  const orangeColor=getComputedStyle(document.documentElement).getPropertyValue('--orange').trim()||'#ffa502';
+  const blueColor=getComputedStyle(document.documentElement).getPropertyValue('--blue').trim()||'#74b9ff';
+  const isDragMode=window._achPanelReorderMode||false;
+
+  // Group by mission name + collect customs
+  const streakPattern=/^(.+) \u2014 (\d+) day streak$/;
+  const missionMap=new Map();
+  const customs=[];
+  Object.entries(ACH_LIST).forEach(([name,reward])=>{
+    const m=name.match(streakPattern);
+    if(m){
+      const mn=m[1],days=parseInt(m[2]);
+      if(!missionMap.has(mn))missionMap.set(mn,[]);
+      missionMap.get(mn).push({name,reward,days});
+    } else {
+      customs.push({name,reward});
+    }
   });
+  missionMap.forEach(arr=>arr.sort((a,b)=>a.days-b.days));
+
+  // Count totals
+  Object.entries(ACH_LIST).forEach(([name,reward])=>{
+    if((achievements[name]||{}).status==='claimed'){claimed++;xpEarned+=reward;}
+  });
+
+  // Build panel list
+  const savedPanelOrder=S.get('ach_panel_order',null)||[];
+  const missionPanels=[...missionMap.entries()].map(([mission,entries])=>({
+    id:'mission:'+mission, mission, entries, type:'mission'
+  }));
+  const customPanels=customs.map(({name,reward})=>({
+    id:'custom:'+name, name, reward, type:'custom'
+  }));
+  let allPanels=[...missionPanels,...customPanels];
+
+  if(savedPanelOrder.length){
+    const inOrder=savedPanelOrder.map(id=>allPanels.find(p=>p.id===id)).filter(Boolean);
+    const notInOrder=allPanels.filter(p=>!savedPanelOrder.includes(p.id));
+    allPanels=[...inOrder,...notInOrder];
+  } else {
+    allPanels=[
+      ...missionPanels.sort((a,b)=>a.mission.localeCompare(b.mission)),
+      ...customPanels
+    ];
+  }
+
+  function makeDraggable(panel,panelId){
+    if(!isDragMode)return;
+    panel.setAttribute('data-panel-id',panelId);
+    panel.draggable=true;
+    panel.style.cursor='grab';
+    // Add drag handle icon to top-left of panel
+    const handle=document.createElement('span');
+    handle.textContent='☰';
+    handle.style.cssText='position:absolute;top:14px;right:14px;font-size:16px;color:var(--orange);cursor:grab;user-select:none;z-index:2;';
+    panel.style.position='relative';
+    panel.appendChild(handle);
+
+    panel.addEventListener('dragstart',e=>{
+      e.dataTransfer.setData('text/plain',panelId);
+      panel.style.opacity='.5';
+    });
+    panel.addEventListener('dragend',()=>{panel.style.opacity='1';panel.style.outline='';});
+    panel.addEventListener('dragover',e=>{e.preventDefault();panel.style.outline='2px dashed var(--orange)';});
+    panel.addEventListener('dragleave',()=>{panel.style.outline='';});
+    panel.addEventListener('drop',e=>{
+      e.preventDefault();panel.style.outline='';
+      const draggedId=e.dataTransfer.getData('text/plain');
+      if(draggedId===panelId)return;
+      const cur=[...grid.querySelectorAll('[data-panel-id]')].map(p=>p.getAttribute('data-panel-id'));
+      const fi=cur.indexOf(draggedId);const ti=cur.indexOf(panelId);
+      if(fi===-1||ti===-1)return;
+      cur.splice(fi,1);cur.splice(ti,0,draggedId);
+      S.set('ach_panel_order',cur);
+      renderAchievements();
+    });
+  }
+
+  allPanels.forEach((panelObj,panelIndex)=>{
+    if(panelObj.type==='mission'){
+      const {mission,entries,id}=panelObj;
+      const allClaimed=entries.every(e=>(achievements[e.name]||{}).status==='claimed');
+      const panelBorderColor=allClaimed?yellowColor:accentColor;
+      const panelBg=allClaimed?`color-mix(in srgb,${yellowColor} 6%,transparent)`:`color-mix(in srgb,${accentColor} 6%,transparent)`;
+      const panel=document.createElement('div');
+      panel.style.cssText=`background:${panelBg};border:1.5px solid ${panelBorderColor};border-radius:14px;padding:14px 16px;margin-bottom:14px;`;
+      const header=document.createElement('div');
+      header.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:12px;';
+      header.innerHTML=`<span style="font-size:22px;line-height:1;">${allClaimed?'\ud83c\udfc6':'\ud83d\udd25'}</span><span style="font-family:'Inter',sans-serif;font-size:18px;font-weight:800;color:var(--white);letter-spacing:.2px;line-height:1.2;">${mission}</span>`;
+      panel.appendChild(header);
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;flex-wrap:wrap;gap:8px;';
+      entries.forEach(({name,reward,days})=>{
+        const isClaimed=(achievements[name]||{}).status==='claimed';
+        const btn=document.createElement('button');
+        const btnColor=isClaimed?yellowColor:cyanColor;
+        btn.style.cssText=`background:${isClaimed?`color-mix(in srgb,${yellowColor} 15%,transparent)`:`color-mix(in srgb,${cyanColor} 12%,transparent)`};border:1.5px solid ${isClaimed?yellowColor:cyanColor};border-radius:10px;padding:10px 14px;cursor:${isClaimed||isDragMode?'default':'pointer'};font-family:'Inter',sans-serif;text-align:center;min-width:68px;transition:.15s;flex-shrink:0;`;
+        btn.innerHTML=`<div style="font-size:22px;font-weight:900;color:${btnColor};font-family:'Inter',sans-serif;line-height:1;">${days}</div><div style="font-size:11px;font-weight:700;color:${isClaimed?yellowColor:'var(--gray)'};margin-top:2px;letter-spacing:.3px;">DAY${days>1?'S':''}</div><div style="font-size:11px;color:${isClaimed?yellowColor:orangeColor};margin-top:4px;font-weight:600;">+${reward.toLocaleString()}</div>${isClaimed?`<div style="font-size:10px;color:${yellowColor};margin-top:2px;">\u2713 claimed</div>`:''}`;
+        if(!isClaimed&&!isDragMode){
+          btn.onmouseover=()=>btn.style.borderColor='var(--white)';
+          btn.onmouseout=()=>btn.style.borderColor=cyanColor;
+          btn.onclick=()=>claimAchievement(name,reward);
+        }
+        row.appendChild(btn);
+      });
+      panel.appendChild(row);
+      if(isDragMode)makeDraggable(panel,id);
+      grid.appendChild(panel);
+    } else {
+      const {name,reward,id}=panelObj;
+      const isClaimed=(achievements[name]||{}).status==='claimed';
+      const panelColor=isClaimed?yellowColor:blueColor;
+      const panel=document.createElement('div');
+      panel.style.cssText=`background:color-mix(in srgb,${panelColor} 7%,transparent);border:1.5px solid ${panelColor};border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;`;
+      panel.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;"><span style="font-size:24px;line-height:1;flex-shrink:0;">${isClaimed?'\ud83c\udfc6':'\u2b50'}</span><div style="min-width:0;"><div style="font-family:'Inter',sans-serif;font-size:18px;font-weight:800;color:var(--white);letter-spacing:.2px;line-height:1.25;word-break:break-word;">${name}</div><div style="font-size:12px;color:${panelColor};font-weight:700;margin-top:4px;">+${reward.toLocaleString()} XP &amp; \ud83d\udcb0${isClaimed?' \u00b7 \u2713 claimed':''}</div></div></div>${!isClaimed&&!isDragMode?`<button style="flex-shrink:0;background:${blueColor};border:none;border-radius:10px;color:#000;font-family:'Inter',sans-serif;font-size:13px;font-weight:800;padding:10px 16px;cursor:pointer;letter-spacing:.3px;">CLAIM</button>`:''}`;
+      if(!isClaimed&&!isDragMode){
+        const claimBtn=panel.querySelector('button');
+        if(claimBtn)claimBtn.onclick=()=>claimAchievement(name,reward);
+      }
+      if(isDragMode)makeDraggable(panel,id);
+      grid.appendChild(panel);
+    }
+  });
+
   document.getElementById('a-claimed').textContent=claimed;
   document.getElementById('a-xp-earned').textContent=xpEarned.toLocaleString();
 }
+
 function claimAchievement(name,reward){
   if((achievements[name]||{}).status==='claimed'){toast('Already claimed!');return;}
   showModal('Claim Achievement?',`<strong>${name}</strong><br><br>Did you HONESTLY earn this?<br>+${reward.toLocaleString()} XP & +${reward.toLocaleString()} 💰`,[
@@ -2683,7 +2983,7 @@ function claimAchievement(name,reward){
       state.xp+=reward;state.cash+=ab.total;
       S.set('achievements',achievements);S.set('state',state);
       updateUI();renderAchievements();closeModal();
-      toast(`🏆 ${name} — +${reward} XP +${ab.total} 💰${ab.extra>0?' ('+ab.pct+'% badge bonus!)':''}`);
+      toast({icon:'🏆',title:`+${reward} XP  +${ab.total} 💰`,sub:`${name}${ab.extra>0?' · '+ab.pct+'% badge bonus':''}`,color:'var(--yellow)'});
     }},
     {txt:'Cancel',cls:'btn-purple',fn:closeModal}
   ]);
@@ -2826,9 +3126,9 @@ function saveMissionEdits(){
 }
 
 // ── ACHIEVEMENT EDITOR ──
-// Reward formula (XP AND cash): (missionXP × days) × (1 + days × 0.1)
+// Reward formula (XP AND cash): missionXP × days × 0.1
 function _achReward(missionXP, days){
-  return Math.round(missionXP * days * days * 0.1);
+  return Math.round(missionXP * days * 0.1);
 }
 
 // ── State for the overlay editor ──
@@ -2876,36 +3176,119 @@ function _achRenderTab(){
 function _achRenderStreaks(body){
   const live=getLiveAchievements();
   const DAYS=[2,3,4,5,6,7];
-  let html=`<div style="font-size:12px;color:var(--gray);margin-bottom:14px;">Click a day pill to <span style="color:var(--cyan)">add</span> or <span style="color:var(--red)">remove</span> that streak. 🏆 = claimed (locked).<br>Reward = <span style="color:var(--yellow)">base XP × days² × 0.1</span> — given as both XP & 💰.</div>`;
 
-  Object.entries(DAILY_LIST).forEach(([mission,mxp])=>{
-    html+=`<div style="background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
-      <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:10px;">${mission} <span style="font-size:11px;color:var(--gray);font-weight:400">base ${mxp} XP</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">`;
+  // Build sorted mission list
+  const savedOrder=S.get('ach_mission_order',null)||[];
+  const allMissions=Object.keys(DAILY_LIST);
+  const ordered=[...allMissions].sort((a,b)=>{
+    const ai=savedOrder.indexOf(a);const bi=savedOrder.indexOf(b);
+    if(ai!==-1&&bi!==-1)return ai-bi;
+    if(ai!==-1)return -1;if(bi!==-1)return 1;
+    return a.localeCompare(b);
+  });
+
+  let html=`<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;">
+    <div style="font-size:12px;color:var(--gray);">Click a day pill to <span style="color:var(--cyan)">add</span> or <span style="color:var(--red)">remove</span>. Reward = <span style="color:var(--yellow)">base XP \u00d7 days \u00d7 0.1</span>. Use ☰ Reorder on the main page to reorder panels.</div>
+  </div>`;
+
+  ordered.forEach((mission,idx)=>{
+    const mxp=DAILY_LIST[mission];
+    const missionEsc=mission.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    html+=`<div class="ach-reorder-row" data-mission="${missionEsc}" style="background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:10px;">${mission} <span style="font-size:11px;color:var(--gray);font-weight:400">base ${mxp} XP</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">`;
     DAYS.forEach(d=>{
-      const achName=`${mission} — ${d} day streak`;
+      const achName=`${mission} \u2014 ${d} day streak`;
       const reward=_achReward(mxp,d);
       const existsInLive=live[achName]!==undefined;
       const pendingAdd=_achPendingAdd.has(achName);
       const pendingDel=_achPendingDel.has(achName);
       const claimed=(achievements[achName]||{}).status==='claimed';
-      // effective state: exists if (existsInLive || pendingAdd) && !pendingDel
       const active=(existsInLive||pendingAdd)&&!pendingDel;
-      let bg,border,color,label;
-      if(claimed){bg='rgba(255,217,61,.18)';border='var(--yellow)';color='var(--yellow)';label=`${d}d 🏆`;}
-      else if(active){bg='rgba(0,210,160,.15)';border='var(--cyan)';color='var(--cyan)';label=`${d}d ✓`;}
+      // pendingDel but not claimed = queued for removal (show red strikethrough)
+      const pendingRemove=pendingDel&&!claimed&&existsInLive;
+      let bg,border,color,label,extra='';
+      if(claimed){bg='rgba(255,217,61,.18)';border='var(--yellow)';color='var(--yellow)';label=`${d}d \ud83c\udfc6`;}
+      else if(pendingRemove){bg='rgba(255,56,56,.1)';border='var(--red)';color='var(--red)';label=`${d}d`;extra=' text-decoration:line-through;opacity:.7;';}
+      else if(active){bg='rgba(0,210,160,.15)';border='var(--cyan)';color='var(--cyan)';label=`${d}d \u2713`;}
       else{bg='transparent';border='var(--border)';color='var(--gray)';label=`${d}d`;}
       const onclick=claimed?'':`onclick="_achToggleStreak('${mission.replace(/'/g,"\\'")}',${d},${mxp})"`;
       const cursor=claimed?'default':'pointer';
-      html+=`<div ${onclick} style="cursor:${cursor};border:1px solid ${border};background:${bg};border-radius:8px;padding:7px 10px;text-align:center;transition:.15s;min-width:52px;">
+      html+=`<div ${onclick} style="cursor:${cursor};border:1px solid ${border};background:${bg};border-radius:8px;padding:7px 10px;text-align:center;transition:.15s;min-width:52px;${extra}">
         <div style="font-size:12px;font-weight:700;color:${color}">${label}</div>
         <div style="font-size:11px;color:var(--gray);margin-top:2px;">+${reward.toLocaleString()}</div>
       </div>`;
     });
-    html+=`</div></div>`;
+    html+=`</div></div></div>`;
   });
 
   body.innerHTML=html;
+  _achInitDrag(body);
+}
+// Drag-to-reorder for achievement editor mission rows
+function _achInitDrag(body){
+  let dragEl=null,placeholder=null,startY=0,offsetY=0;
+
+  function getRows(){return [...body.querySelectorAll('.ach-reorder-row')];}
+
+  function onStart(e,el){
+    dragEl=el;
+    const rect=el.getBoundingClientRect();
+    const clientY=e.touches?e.touches[0].clientY:e.clientY;
+    offsetY=clientY-rect.top;
+    startY=clientY;
+    placeholder=document.createElement('div');
+    placeholder.style.cssText=`height:${rect.height}px;background:var(--bg3);border:1.5px dashed var(--orange);border-radius:10px;margin-bottom:10px;opacity:.5;`;
+    el.parentNode.insertBefore(placeholder,el.nextSibling);
+    el.style.cssText+=`;position:fixed;z-index:500;width:${rect.width}px;left:${rect.left}px;top:${rect.top}px;opacity:.88;box-shadow:0 8px 24px rgba(0,0,0,.6);pointer-events:none;transition:none;`;
+    document.addEventListener('mousemove',onMove,{passive:false});
+    document.addEventListener('mouseup',onEnd);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('touchend',onEnd);
+  }
+
+  function onMove(e){
+    if(!dragEl)return;
+    e.preventDefault();
+    const clientY=e.touches?e.touches[0].clientY:e.clientY;
+    dragEl.style.top=(clientY-offsetY)+'px';
+    // Find insertion point
+    const rows=getRows().filter(r=>r!==dragEl);
+    let inserted=false;
+    for(const row of rows){
+      const rect=row.getBoundingClientRect();
+      if(clientY<rect.top+rect.height/2){
+        row.parentNode.insertBefore(placeholder,row);
+        inserted=true;break;
+      }
+    }
+    if(!inserted&&rows.length)rows[rows.length-1].parentNode.appendChild(placeholder);
+  }
+
+  function onEnd(){
+    if(!dragEl)return;
+    // Restore dragEl style
+    dragEl.style.position='';dragEl.style.zIndex='';dragEl.style.width='';
+    dragEl.style.left='';dragEl.style.top='';dragEl.style.opacity='';
+    dragEl.style.boxShadow='';dragEl.style.pointerEvents='';
+    placeholder.parentNode.insertBefore(dragEl,placeholder);
+    placeholder.remove();
+    // Save new order
+    const newOrder=getRows().map(r=>r.getAttribute('data-mission').replace(/&amp;/g,'&').replace(/&quot;/g,'"'));
+    S.set('ach_mission_order',newOrder);
+    dragEl=null;placeholder=null;
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onEnd);
+    document.removeEventListener('touchmove',onMove);
+    document.removeEventListener('touchend',onEnd);
+  }
+
+  // Attach drag listeners to handles only
+  body.querySelectorAll('.ach-drag-handle').forEach(handle=>{
+    handle.addEventListener('mousedown',e=>{e.preventDefault();onStart(e,handle.closest('.ach-reorder-row'));});
+    handle.addEventListener('touchstart',e=>{e.preventDefault();onStart(e,handle.closest('.ach-reorder-row'));},{passive:false});
+  });
 }
 window._achToggleStreak=function(mission,days,mxp){
   const achName=`${mission} — ${days} day streak`;
@@ -2998,6 +3381,74 @@ window._achDelCustom=function(name){
   _achRenderTab();
 };
 
+// ── Reset all achievements (CLEARS claimed state + pending edits) ──
+window.resetAchievementsToDefault=function(){
+  if(!confirm('Clear ALL selected achievements and claimed progress? This cannot be undone.'))return;
+  // 1. Wipe claimed achievements (even claimed/yellow ones)
+  achievements={};
+  S.set('achievements',achievements);
+  // 2. Wipe custom achievement list → back to hardcoded defaults
+  S.set('custom_achievements',null);
+  // 3. Wipe saved panel order
+  S.set('ach_mission_order',null);
+  S.set('ach_panel_order',null);
+  // 4. Restore ACH_LIST in memory to defaults
+  Object.keys(ACH_LIST).forEach(k=>delete ACH_LIST[k]);
+  Object.assign(ACH_LIST,ACH_LIST_DEFAULT);
+  // 5. Clear pending edits in the overlay
+  _achPendingAdd=new Set();
+  _achPendingDel=new Set();
+  _achPendingCustomRewards={};
+  // 6. Close overlay and re-render
+  _closeAchOverlay();
+  renderAchievements();
+  updateUI();
+  toast({icon:'↺',title:'Achievements cleared',sub:'All selections and claimed progress reset',color:'var(--orange)'});
+};
+
+// ── Panel reorder for Achievements screen ──
+window._achPanelReorderMode=false;
+window.toggleAchPanelReorder=function(){
+  window._achPanelReorderMode=!window._achPanelReorderMode;
+  const btn=document.getElementById('ach-reorder-toggle-btn');
+  const hint=document.getElementById('ach-reorder-hint');
+  const doneBtn=document.getElementById('ach-reorder-done-btn');
+  if(btn){btn.style.background=window._achPanelReorderMode?'var(--orange)':'var(--bg4)';btn.style.color=window._achPanelReorderMode?'#000':'var(--gray)';btn.style.borderColor=window._achPanelReorderMode?'var(--orange)':'var(--border)';}
+  if(hint)hint.style.display=window._achPanelReorderMode?'inline':'none';
+  if(doneBtn)doneBtn.style.display=window._achPanelReorderMode?'inline-block':'none';
+  renderAchievements();
+};
+window.finishAchPanelReorder=function(){
+  window._achPanelReorderMode=false;
+  const btn=document.getElementById('ach-reorder-toggle-btn');
+  const hint=document.getElementById('ach-reorder-hint');
+  const doneBtn=document.getElementById('ach-reorder-done-btn');
+  if(btn){btn.style.background='var(--bg4)';btn.style.color='var(--gray)';btn.style.borderColor='var(--border)';}
+  if(hint)hint.style.display='none';
+  if(doneBtn)doneBtn.style.display='none';
+  renderAchievements();
+  toast({icon:'✅',title:'Panel order saved',color:'var(--cyan)'});
+};
+
+// ── Mission drag mode toggle ──
+window.toggleMissionDragMode=function(){
+  window._missionDragMode=!window._missionDragMode;
+  const btn=document.getElementById('mission-reorder-toggle-btn');
+  const doneBtn=document.getElementById('mission-reorder-done-btn');
+  if(btn){btn.style.background=window._missionDragMode?'var(--orange)':'var(--bg4)';btn.style.color=window._missionDragMode?'#000':'var(--gray)';btn.style.borderColor=window._missionDragMode?'var(--orange)':'var(--border)';}
+  if(doneBtn)doneBtn.style.display=window._missionDragMode?'inline-block':'none';
+  renderMissions();
+};
+window.finishMissionDragMode=function(){
+  window._missionDragMode=false;
+  const btn=document.getElementById('mission-reorder-toggle-btn');
+  const doneBtn=document.getElementById('mission-reorder-done-btn');
+  if(btn){btn.style.background='var(--bg4)';btn.style.color='var(--gray)';btn.style.borderColor='var(--border)';}
+  if(doneBtn)doneBtn.style.display='none';
+  renderMissions();
+  toast({icon:'✅',title:'Mission order saved',color:'var(--cyan)'});
+};
+
 function saveAchievementEdits(){
   const live=getLiveAchievements();
   const newList={};
@@ -3047,10 +3498,14 @@ function saveAchievementEdits(){
   }
   const ca=getCustomAchievements();
   if(ca!==null){
+    // ca could be {} (empty) for new users who haven't added any
     Object.keys(ACH_LIST).forEach(k=>delete ACH_LIST[k]);
     Object.assign(ACH_LIST,ca);
   }
-  _syncStreakGroups(); // auto-absorb new/removed missions into streak groups
+  // Note: if ca===null, it's an existing user with the old hardcoded defaults.
+  // New users who have never set achievements will have ca===null too initially —
+  // they see the hardcoded defaults until they edit. This is intentional for existing users.
+  _syncStreakGroups();
 })();
 
 // ═══════════════════════════════════════════
@@ -4255,7 +4710,7 @@ function qsConfirm(){
       QS_MISSIONS.filter(m=>qsSelected.has(m.id)).forEach(m=>{
         if(document.getElementById('qsc-'+m.id)?.checked){earned+=m.cash;done.push(m.label);}
       });
-      if(earned>0){const qb=applyBonus(earned);state.cash+=qb.total;S.set('state',state);updateUI();closeModal();renderQuickStart();toast(`+${qb.total} 💰 earned!${qb.extra>0?' (+'+qb.extra+' badge bonus '+qb.pct+'%)':''} 🔥`);}
+      if(earned>0){const qb=applyBonus(earned);state.cash+=qb.total;S.set('state',state);updateUI();closeModal();renderQuickStart();toast({icon:'🔥',title:`+${qb.total} 💰 earned`,sub:qb.extra>0?`+${qb.extra} badge bonus (${qb.pct}%)`:'',color:'var(--orange)'});}
       else{closeModal();renderQuickStart();toast('Nothing earned. Try again!');}
     }},{txt:'Cancel',cls:'btn-purple',fn:closeModal}
   ]);
@@ -4956,6 +5411,10 @@ updateUI();
   window.getLiveMissions=getLiveMissions;
   window.getLiveAchievements=getLiveAchievements;
   window.openMissionEditor=openMissionEditor;
+window.toggleMissionDragMode=toggleMissionDragMode;
+window.finishMissionDragMode=finishMissionDragMode;
+window.toggleAchPanelReorder=toggleAchPanelReorder;
+window.finishAchPanelReorder=finishAchPanelReorder;
   window.showMissionEditorPanel=showMissionEditorPanel;
   window.deleteMissionRow=deleteMissionRow;
   window.addMissionRow=addMissionRow;
@@ -7197,11 +7656,11 @@ window.thmDeleteOwned=thmDeleteOwned;
       const blockW=150+days*CELL_W;
 
       // Month separator — full-width sticky label
-      html+=`<div class="ht-msep" id="htmb-${mi}" style="width:${blockW}px;">`;
+      html+=`<div class="ht-msep" id="htmb-${mi}" style="min-width:${blockW}px;">`;
       html+=`<div class="ht-msep-label">${MONTHS()[m].toUpperCase()} ${y}</div></div>`;
 
       // Date header row
-      html+=`<div class="ht-hrow" style="width:${blockW}px;">`;
+      html+=`<div class="ht-hrow" style="min-width:${blockW}px;">`;
       html+=`<div class="ht-hlabel">MISSIONS</div>`;
       for(let d=1;d<=days;d++){
         const ds=`${y}-${p2(m+1)}-${p2(d)}`;
@@ -7213,7 +7672,7 @@ window.thmDeleteOwned=thmDeleteOwned;
 
       // One row per habit
       htRows.forEach((row,ri)=>{
-        html+=`<div class="ht-row" id="htrow-${mi}-${ri}" style="width:${blockW}px;" data-ri="${ri}" data-mi="${mi}"
+        html+=`<div class="ht-row" id="htrow-${mi}-${ri}" style="min-width:${blockW}px;" data-ri="${ri}" data-mi="${mi}"
           draggable="true"
           ondragstart="htDragStart(event,${ri})"
           ondragover="htDragOver(event,${ri})"
@@ -7238,9 +7697,134 @@ window.thmDeleteOwned=thmDeleteOwned;
     }
 
     table.innerHTML=html;
+    if(htStatsOpen) htRenderStats();
   }
 
   function _esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // ── Stats panel ───────────────────────────────────────────
+  let htStatsOpen = true;
+  window.htToggleStats = function(){
+    htStatsOpen = !htStatsOpen;
+    const panel = document.getElementById('ht-stats-panel');
+    const btn   = document.getElementById('ht-stats-btn');
+    if(panel) panel.style.display = htStatsOpen ? 'block' : 'none';
+    if(btn)   btn.classList.toggle('active', htStatsOpen);
+    if(htStatsOpen) htRenderStats();
+  };
+
+  function htRenderStats(){
+    const inner = document.getElementById('ht-stats-inner');
+    if(!inner) return;
+    const today = htToday();
+    const [ty,tm] = today.split('-').map(Number);
+    const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim()||'#6c5ce7';
+    const cyan   = getComputedStyle(document.documentElement).getPropertyValue('--cyan').trim()||'#00d2a0';
+    const yellow = getComputedStyle(document.documentElement).getPropertyValue('--yellow').trim()||'#ffd93d';
+    const orange = getComputedStyle(document.documentElement).getPropertyValue('--orange').trim()||'#ffa502';
+    const border = getComputedStyle(document.documentElement).getPropertyValue('--border').trim()||'#3d3d5c';
+
+    if(!htRows.length){
+      inner.innerHTML=`<div style="color:var(--gray);font-size:14px;padding:10px 0;">No habits yet — add one to see stats!</div>`;
+      return;
+    }
+
+    // Today's completion
+    const daysNow = daysInMonth(ty, tm-1);
+    let todayDone=0;
+    htRows.forEach(r=>{ if(htChecks[`${today}_${r.id}`]) todayDone++; });
+    const todayPct = htRows.length ? Math.round(todayDone/htRows.length*100) : 0;
+
+    // This month completion %
+    let monthChecked=0, monthTotal=0;
+    for(let d=1;d<=daysNow;d++){
+      const ds=`${ty}-${String(tm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      if(ds>today) break;
+      htRows.forEach(r=>{ monthTotal++; if(htChecks[`${ds}_${r.id}`]) monthChecked++; });
+    }
+    const monthPct = monthTotal ? Math.round(monthChecked/monthTotal*100) : 0;
+
+    // Last 7 days bar chart data
+    const last7=[];
+    for(let i=6;i>=0;i--){
+      const d=new Date(); d.setDate(d.getDate()-i);
+      const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      let cnt=0; htRows.forEach(r=>{ if(htChecks[`${ds}_${r.id}`]) cnt++; });
+      last7.push({ds, pct: htRows.length ? Math.round(cnt/htRows.length*100) : 0});
+    }
+
+    // Current perfect-day streak
+    let curStreak=0;
+    if(htRows.length){
+      const d=new Date();
+      while(true){
+        const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const allDone=htRows.every(r=>htChecks[`${ds}_${r.id}`]);
+        if(!allDone) break;
+        curStreak++; d.setDate(d.getDate()-1);
+      }
+    }
+
+    // Neglected habits (0 checks in last 7 days)
+    const last7dates=[];
+    for(let i=0;i<7;i++){ const d=new Date(); d.setDate(d.getDate()-i); last7dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`); }
+    const sluggish=htRows.filter(r=>!last7dates.some(ds=>htChecks[`${ds}_${r.id}`]));
+
+    // Donut SVG for today
+    const r=30, circ=2*Math.PI*r, dash=circ*(todayPct/100);
+    const donutGap = circ - dash + 0.001;
+    const donutColor = todayPct===100 ? yellow : todayPct>=50 ? cyan : purple;
+
+    // 7-day bars — always scale to 100% (not maxPct) so bar heights are absolute
+    const CHART_H = 48;
+    const bars=last7.map((x,i)=>{
+      const h=Math.max(2, Math.round(x.pct/100*CHART_H));
+      const isToday=i===6;
+      return `<div class="ht-mini-bar" style="height:${h}px;background:${isToday?cyan:purple};opacity:${isToday?1:0.35+(x.pct/100)*0.65};" title="${x.ds}: ${x.pct}%"></div>`;
+    }).join('');
+
+    inner.innerHTML=`
+      <div class="ht-stat-card" style="border-color:${donutColor}50;min-width:130px;">
+        <div style="font-size:11px;color:var(--gray);font-weight:700;letter-spacing:.5px;margin-bottom:10px;">TODAY</div>
+        <div class="ht-donut-wrap" style="margin:0 auto;width:76px;height:76px;">
+          <svg viewBox="0 0 76 76" width="76" height="76"><circle cx="38" cy="38" r="${r}" fill="none" stroke="${border}" stroke-width="7"/><circle cx="38" cy="38" r="${r}" fill="none" stroke="${donutColor}" stroke-width="7" stroke-dasharray="${dash} ${donutGap}" stroke-dashoffset="${circ/4}" stroke-linecap="round" style="transition:stroke-dasharray .6s ease;"/></svg>
+          <div class="ht-donut-label" style="color:${donutColor};font-size:14px;">${todayPct}%</div>
+        </div>
+        <div style="font-size:13px;color:var(--gray);font-weight:600;margin-top:8px;">${todayDone}/${htRows.length} done</div>
+      </div>
+
+      <div class="ht-stat-card" style="border-color:${cyan}50;min-width:130px;">
+        <div style="font-size:11px;color:var(--gray);font-weight:700;letter-spacing:.5px;margin-bottom:6px;">THIS MONTH</div>
+        <div class="ht-stat-val" style="color:${cyan};">${monthPct}%</div>
+        <div style="margin-top:10px;background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;"><div style="height:100%;width:${monthPct}%;background:${cyan};border-radius:4px;transition:width .6s;"></div></div>
+        <div style="font-size:12px;color:var(--gray);margin-top:7px;font-weight:600;">${monthChecked}/${monthTotal} checks</div>
+      </div>
+
+      <div class="ht-stat-card" style="border-color:${orange}50;min-width:130px;">
+        <div style="font-size:11px;color:var(--gray);font-weight:700;letter-spacing:.5px;margin-bottom:6px;">PERFECT DAYS</div>
+        <div class="ht-stat-val" style="color:${orange};">🔥${curStreak}</div>
+        <div style="font-size:12px;color:var(--gray);margin-top:7px;font-weight:600;">all habits done</div>
+      </div>
+
+      <div class="ht-stat-card" style="min-width:160px;">
+        <div style="font-size:11px;color:var(--gray);font-weight:700;letter-spacing:.5px;margin-bottom:6px;">LAST 7 DAYS</div>
+        <div style="position:relative;">
+          <div style="position:absolute;top:0;left:0;right:0;border-top:1.5px dotted ${border};pointer-events:none;z-index:2;"></div>
+          <div class="ht-mini-chart" style="height:${CHART_H}px;">${bars}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;">${last7.map((x,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));return `<div style="font-size:10px;color:${i===6?cyan:'var(--gray)'};font-weight:${i===6?'800':'500'};width:8px;text-align:center;">${['S','M','T','W','T','F','S'][d.getDay()]}</div>`;}).join('')}</div>
+      </div>
+
+      ${sluggish.length ? `
+      <div class="ht-stat-card" style="border-color:rgba(255,56,56,.45);min-width:150px;">
+        <div style="font-size:11px;color:var(--gray);font-weight:700;letter-spacing:.5px;margin-bottom:8px;">⚠ NEGLECTED</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          ${sluggish.slice(0,4).map(r=>`<div style="font-size:12px;color:var(--red,#ff3838);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_esc(r.label||'Mission')}</div>`).join('')}
+          ${sluggish.length>4?`<div style="font-size:11px;color:var(--gray);margin-top:2px;">+${sluggish.length-4} more</div>`:''}
+        </div>
+      </div>` : ''}
+    `;
+  }
 
   // ── Scroll: track + save both axes ───────────────────────
   function htBindScroll(){
@@ -7258,14 +7842,15 @@ window.thmDeleteOwned=thmDeleteOwned;
   function htRestoreScroll(){
     const sc=document.getElementById('ht-scroll');
     if(!sc) return;
-    if(htScrollY>=0){
-      sc.scrollTop=htScrollY;
-      sc.scrollLeft=htScrollX;
-    } else {
-      // default: jump to current month
-      const mb=document.getElementById(`htmb-${todayMonthIdx()}`);
-      if(mb) sc.scrollTop=mb.offsetTop;
-    }
+    // Always jump to current month — never restore saved vertical scroll
+    // (stale saved Y from old sessions can land in 2022/2023)
+    htScrollY = -1;
+    const mb=document.getElementById(`htmb-${todayMonthIdx()}`);
+    if(mb) sc.scrollTop=mb.offsetTop;
+    // Scroll horizontally to today's column
+    const todayCell=sc.querySelector('.ht-cell.is-today, .ht-dcell.is-today');
+    if(todayCell) sc.scrollLeft=Math.max(0, todayCell.offsetLeft - sc.clientWidth/2 + 18);
+    else sc.scrollLeft=0;
     htUpdateLabel();
   }
 
@@ -7283,6 +7868,7 @@ window.thmDeleteOwned=thmDeleteOwned;
     if(htChecks[key]){ delete htChecks[key]; el.classList.remove('is-checked'); }
     else             { htChecks[key]=true;   el.classList.add('is-checked'); }
     htSaveChecks();
+    if(htStatsOpen) htRenderStats();
   };
 
   // ── Month nav ─────────────────────────────────────────────
@@ -7421,9 +8007,16 @@ window.thmDeleteOwned=thmDeleteOwned;
     const ov=document.getElementById('ht-overlay');
     if(ov) ov.classList.add('open');
     htBuild();
+    // Always show stats panel on open
+    const panel=document.getElementById('ht-stats-panel');
+    const btn=document.getElementById('ht-stats-btn');
+    htStatsOpen=true;
+    if(panel) panel.style.display='block';
+    if(btn) btn.classList.add('active');
     setTimeout(()=>{
       htBindScroll();
       htRestoreScroll();
+      htRenderStats();
     },40);
   };
   window.htClose=function(){
