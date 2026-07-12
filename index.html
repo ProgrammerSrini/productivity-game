@@ -39,7 +39,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 @keyframes gpulse{0%,100%{opacity:1}50%{opacity:.8}}
 /* S-TIER HERO */
 #home-hero.s-tier-hero{
-  overflow:visible !important;
+  overflow:hidden !important;
   background:linear-gradient(135deg,
     rgba(100,0,30,.82) 0%,rgba(45,0,100,.78) 18%,rgba(0,15,100,.75) 33%,
     rgba(0,80,55,.72) 50%,rgba(0,90,20,.72) 63%,rgba(70,75,0,.75) 75%,
@@ -71,9 +71,9 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
   padding:1.5px;
 }
 @keyframes s-hero-flow{
-  0%  {background-position:0% 50%;filter:hue-rotate(0deg) brightness(.9) saturate(1.2);}
-  50% {background-position:100% 50%;filter:hue-rotate(180deg) brightness(1.0) saturate(1.5);}
-  100%{background-position:0% 50%;filter:hue-rotate(360deg) brightness(.9) saturate(1.2);}
+  0%  {background-position:0% 50%;filter:hue-rotate(0deg) brightness(1.05) saturate(1.2);}
+  50% {background-position:100% 50%;filter:hue-rotate(180deg) brightness(1.22) saturate(1.5);}
+  100%{background-position:0% 50%;filter:hue-rotate(360deg) brightness(1.05) saturate(1.2);}
 }
 @keyframes s-border-flow{
   0%  {background-position:0% 50%;filter:hue-rotate(0deg) saturate(2.5) brightness(2.2);}
@@ -1553,7 +1553,7 @@ const BADGES=[
   {id:"platinum",name:"Platinum",emoji:"🪨",cost:14000,color:"#c8e0f0",bonus:0.45},
   {id:"emerald",name:"Emerald",emoji:"💚",cost:32000,color:"#2e8b57",bonus:0.60},
   {id:"diamond",name:"Diamond",emoji:"💎",cost:72000,color:"#4a90c4",bonus:0.75},
-  {id:"alpha",name:"Alpha",emoji:"🗡️",cost:160000,color:"#8B5A2B",bonus:0.90},
+  {id:"alpha",name:"Alpha",emoji:"🦁",cost:160000,color:"#8B5A2B",bonus:0.90},
   {id:"omega",name:"Omega",emoji:"🐉",cost:350000,color:"#cc2200",bonus:1.00},
 ];
 
@@ -1905,6 +1905,33 @@ function updateUI(){
     bsLabel.style.color=eb.color;
     bsBox.style.borderColor=eb.color+'66';
     bsBox.style.background=eb.color+'11';
+    if(eb.id==='alpha'||eb.id==='omega'){
+      // Fixed-height frame, shorter than the emoji: in S-tier it overflows visibly
+      // (edges sticking out of the rectangle); in every other tier it's clipped
+      // flush at the box edge (cut off inside — box stays the same size, never bigger).
+      bsBox.style.display='flex';
+      bsBox.style.flexDirection='column';
+      bsBox.style.alignItems='center';
+      bsBox.style.justifyContent='center';
+      bsBox.style.height='80px';
+      bsBox.style.position='relative';
+      if(tier.t==='S'){
+        bsBox.style.overflow='visible';
+        bsBox.style.zIndex='5';
+      }else{
+        bsBox.style.overflow='hidden';
+        bsBox.style.zIndex='';
+      }
+    }else{
+      bsBox.style.display='';
+      bsBox.style.flexDirection='';
+      bsBox.style.alignItems='';
+      bsBox.style.justifyContent='';
+      bsBox.style.height='';
+      bsBox.style.position='';
+      bsBox.style.overflow='';
+      bsBox.style.zIndex='';
+    }
   }else{
     bsEmoji.textContent='🏅';
     bsEmoji.style.fontSize='88px';
@@ -1913,6 +1940,14 @@ function updateUI(){
     bsLabel.style.color='#555';
     bsBox.style.borderColor='var(--border)';
     bsBox.style.background='var(--bg3)';
+    bsBox.style.display='';
+    bsBox.style.flexDirection='';
+    bsBox.style.alignItems='';
+    bsBox.style.justifyContent='';
+    bsBox.style.height='';
+    bsBox.style.position='';
+    bsBox.style.overflow='';
+    bsBox.style.zIndex='';
   }
   const mc=Object.keys(missions_status).filter(k=>missions_status[k]==='done').length;
   document.getElementById('h-daily-xp').textContent=state.daily_xp;
