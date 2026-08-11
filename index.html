@@ -146,8 +146,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 #toast-inner{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.04);backdrop-filter:blur(12px);}
 #toast-icon{font-size:22px;line-height:1;flex-shrink:0;}
 #toast-body{flex:1;min-width:0;}
-#toast-title{font-size:14px;font-weight:700;color:var(--white);letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-#toast-sub{font-size:12px;color:var(--gray);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toast-title{font-size:14px;font-weight:700;color:var(--white);letter-spacing:.2px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;}
+#toast-sub{font-size:12px;color:var(--gray);margin-top:2px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;}
 #toast-accent{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0;min-height:28px;}
 @keyframes coach-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 select{-webkit-appearance:none;appearance:none;}
@@ -4270,7 +4270,7 @@ function setLogFilter(val){
   renderLogs();
 }
 function clearLogView(){
-  logViewCutoff=daily_logs.length?daily_logs[daily_logs.length-1].date:todayStr();
+  logViewCutoff=daily_logs.length?daily_logs[0].date:todayStr();
   S.set('log_view_cutoff',logViewCutoff);
   renderLogs();
   toast('Log view cleared. Data still saved.');
