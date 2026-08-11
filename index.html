@@ -1139,9 +1139,10 @@ select{-webkit-appearance:none;appearance:none;}
   <div class="card">
     <div class="card-title">⚖️ DAILY LOG + AUDIT</div>
     <div style="font-size:14px;color:var(--orange);margin-bottom:12px">⚠️ Fill before sleeping. One button runs audit AND saves log.</div>
-    <div class="log-field"><label>Study Hours</label><input type="number" id="a-study" value="8" min="0" max="20" step="0.5"></div>
+    <div class="log-field"><label>Available Hours (time you actually had)</label><input type="number" id="a-avail" value="8" min="0" max="20" step="0.5"></div>
+    <div class="log-field"><label>Productive Hours (of that time)</label><input type="number" id="a-study" value="6" min="0" max="20" step="0.5"></div>
     <div class="log-field"><label>Distraction Hours</label><input type="number" id="a-dist" value="0.5" min="0" max="12" step="0.5"></div>
-    <div class="log-field"><label>Sandhi (Morn &amp; Eve)?</label><select id="a-sandhi"><option value="YES">YES</option><option value="NO">NO</option></select></div>
+    <div class="log-field"><label>4L Water?</label><select id="a-water"><option value="YES">YES</option><option value="NO">NO</option></select></div>
     <div class="log-field"><label>Sleep Hours</label><input type="number" id="a-sleep" value="7" min="0" max="12" step="0.5"></div>
     <div class="log-field"><label>Woke before 6AM?</label><select id="a-wake"><option value="YES">YES</option><option value="NO">NO</option></select></div>
     <div class="log-field"><label>FAP?</label><select id="a-fap"><option value="NO">NO</option><option value="YES">YES</option></select></div>
@@ -1175,11 +1176,23 @@ select{-webkit-appearance:none;appearance:none;}
   </div>
 
   <div class="card">
-    <div class="card-title">🎯 GOAL CALCULATOR</div>
-    <div style="font-size:14px;color:var(--gray);margin-bottom:12px">What inputs do I need to hit a target progress%?</div>
-    <div class="log-field"><label>Target %</label><input type="number" id="gc-target" class="inp" value="80" min="1" max="100"></div>
-    <button class="btn btn-cyan btn-full" onclick="runGoalCalc()">🧮 Calculate</button>
-    <div id="gc-result" style="margin-top:10px;display:none"></div>
+    <div class="card-title">🧪 MOCK LOG SIMULATOR</div>
+    <div style="font-size:14px;color:var(--gray);margin-bottom:12px">Test any combination — nothing here saves, syncs to Supabase, or touches infestation.</div>
+    <div class="log-field"><label>Available Hours: <span id="mk-avail-out">8</span></label><input type="range" id="mk-avail" min="0" max="14" step="0.5" value="8" style="width:100%;accent-color:var(--purple);" oninput="mockCalc()"></div>
+    <div class="log-field"><label>Productive Hours: <span id="mk-prod-out">6</span></label><input type="range" id="mk-prod" min="0" max="14" step="0.5" value="6" style="width:100%;accent-color:var(--cyan);" oninput="mockCalc()"></div>
+    <div class="log-field"><label>Distraction Hours: <span id="mk-dist-out">0.5</span></label><input type="range" id="mk-dist" min="0" max="6" step="0.25" value="0.5" style="width:100%;accent-color:var(--orange);" oninput="mockCalc()"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <button type="button" class="btn btn-sm" id="mk-water" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray)" onclick="mockToggle('water')">💧 Water: NO</button>
+      <button type="button" class="btn btn-sm" id="mk-wake" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray)" onclick="mockToggle('wake')">🌅 Wake&lt;6: NO</button>
+      <button type="button" class="btn btn-sm" id="mk-sleep" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray)" onclick="mockToggle('sleep')">😴 Sleep7h: NO</button>
+      <button type="button" class="btn btn-sm" id="mk-fap" style="background:var(--bg4);border:1px solid var(--border);color:var(--gray)" onclick="mockToggle('fap')">🚫 FAP: NO</button>
+    </div>
+    <div class="log-field"><label>Current Baseline %: <span id="mk-base-out">50</span></label><input type="range" id="mk-base" min="0" max="100" step="1" value="50" style="width:100%;accent-color:var(--yellow);" oninput="mockCalc()"></div>
+    <button class="btn btn-cyan btn-full btn-sm" style="margin-bottom:10px" onclick="mockUseCurrentBaseline()">↺ Use my actual current baseline</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="stat-box"><div class="stat-val" id="mk-raw-out" style="color:var(--cyan)">0%</div><div class="stat-lbl">Raw Score</div></div>
+      <div class="stat-box"><div class="stat-val" id="mk-final-out" style="color:var(--yellow)">0%</div><div class="stat-lbl">New Baseline</div></div>
+    </div>
   </div>
   <div class="card"><div class="card-title">📜 LOG HISTORY</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
@@ -4079,10 +4092,12 @@ function submitLog(){
   _doSubmitLog();
 }
 function _doSubmitLog(){
+  const avail=parseFloat(document.getElementById('a-avail').value)||0;
   const study=parseFloat(document.getElementById('a-study').value)||0;
+  const util=avail>0?Math.round(Math.min(1,study/avail)*100):0;
   const D=parseFloat(document.getElementById('a-dist').value)||0;
   const S2=parseFloat(document.getElementById('a-sleep').value)||0;
-  const sandhi=document.getElementById('a-sandhi').value;
+  const water=document.getElementById('a-water').value;
   const fap=document.getElementById('a-fap').value;
   const wake=document.getElementById('a-wake').value;
   const sleep=S2>=7?'YES':'NO';
@@ -4113,7 +4128,7 @@ function _doSubmitLog(){
     weekly_data[wk].weekly={avg_progress:Math.round(avgProgress),tier:t.t,avg_xp:avgXP,total_xp:totalXP,avg_study:avgStudy.toFixed(1),perfect_days:`${perfectDays}/${weekDays.length}`,fap_count:fapCount};
   }
   S.set('weekly',weekly_data);
-  const entry={date:today,study,sandhi,waste,fap,wake,sleep,perfect,missions:missCount,missions_list:missions_done,xp:state.daily_xp,pointer:state.pointer};
+  const entry={date:today,study,available_hours:avail,utilization_pct:util,water,sandhi:water,waste,fap,wake,sleep,perfect,missions:missCount,missions_list:missions_done,xp:state.daily_xp,pointer:state.pointer};
   daily_logs.unshift(entry);if(daily_logs.length>60)daily_logs=daily_logs.slice(0,60);
   S.set('logs',daily_logs);
   updateUI();renderLogs();
@@ -4124,78 +4139,62 @@ function runAuditAndLog(){
   runAudit();
   submitLog();
 }
-function runGoalCalc() {
-  const target = Math.min(100, Math.max(1, parseInt(document.getElementById('gc-target').value) || 80));
-  const current = state.pointer;
-  const el = document.getElementById('gc-result');
-  el.style.display = 'block';
-
-  // To shift the baseline average to 'target', today's score must be: (Target * 2) - Current
-  const scoreNeeded = (target * 2) - current;
-
-  // Max possible daily score in your audit engine is 150 (before multipliers)
-  if (scoreNeeded > 186) { // 150 * 1.24 (max routine) = 186
-    el.innerHTML = `<div class="card" style="border-color:var(--red); background:rgba(255,56,56,0.1)">
-      <div style="font-size:14px; color:var(--red); font-weight:700">🚫 TARGET UNREACHABLE</div>
-      <div style="font-size:13px; color:var(--gray); margin-top:4px">To hit ${target}%, you need ${scoreNeeded.toFixed(0)}% today. Max possible is ~186%.</div>
-    </div>`;
-    return;
-  }
-
-  // Exact reverse-engineering of your Study Engine math
-  function hFromPs(ps) {
-    if (ps <= 0) return 2;
-    if (ps <= 50) return 2 + (ps / 10); 
-    if (ps <= 66.7) return 7 + (ps - 50) / 16.7; 
-    if (ps <= 83) return 8 + (ps - 66.7) / 8.15; 
-    return 10 + (ps - 83) / 8.5; 
-  }
-
-  const hA = hFromPs(scoreNeeded / 1.24); // Full Routine
-  const hB = hFromPs(scoreNeeded);       // Standard
-  const hC = hFromPs(scoreNeeded / 0.4);  // FAP Breach Penalty
-
-  let html = `<div class="card" style="border-color:var(--purple); background:var(--bg2)">
-    <div style="font-size:13px; color:var(--gray); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:8px">
-      Current Baseline: <strong style="color:var(--white)">${current}%</strong> → Target: <strong style="color:var(--cyan)">${target}%</strong><br>
-      Score Required Today: <strong style="color:var(--yellow)">${Math.max(0, scoreNeeded).toFixed(1)}%</strong>
-    </div>`;
-
-  if (scoreNeeded <= 0) {
-    html += `<div style="color:var(--cyan); font-weight:700; font-size:14px">✅ ON TRACK</div>`;
-  } else {
-    const renderRow = (title, hours, color, subtitle) => {
-      if (hours > 16) return `<div style="padding:8px 0; opacity:0.5; font-size:12px">❌ ${title}: Impossible (>16h study)</div>`;
-      return `<div style="padding:10px 0; border-bottom:1px solid var(--border)">
-        <div style="color:${color}; font-weight:700; font-size:14px">${title}</div>
-        <div style="font-size:13px; color:var(--white)">Study <strong>${hours.toFixed(1)} hours</strong></div>
-        <div style="font-size:11px; color:var(--gray)">${subtitle}</div>
-      </div>`;
-    };
-
-    html += renderRow("⚡ PERFECT DISCIPLINE", hA, "var(--cyan)", "Sandhi + 7h Sleep + Early Wake + No FAP");
-    html += renderRow("⚖️ STANDARD DAY", hB, "var(--orange)", "No routine bonuses, 0 distraction, No FAP");
-    html += renderRow("💀 RECOVERY MODE", hC, "var(--red)", "Studying through a FAP penalty");
-  }
-
-  el.innerHTML = html;
+const mockFlags={water:false,wake:false,sleep:false,fap:false};
+function mockToggle(key){
+  mockFlags[key]=!mockFlags[key];
+  const labels={water:'💧 Water',wake:'🌅 Wake<6',sleep:'😴 Sleep7h',fap:'🚫 FAP'};
+  const el=document.getElementById('mk-'+key);
+  el.textContent=`${labels[key]}: ${mockFlags[key]?'YES':'NO'}`;
+  el.style.background=mockFlags[key]?'var(--purple)':'var(--bg4)';
+  el.style.color=mockFlags[key]?'#fff':'var(--gray)';
+  mockCalc();
 }
+function mockUseCurrentBaseline(){
+  document.getElementById('mk-base').value=state.pointer;
+  mockCalc();
+}
+function mockCalc(){
+  const avail=parseFloat(document.getElementById('mk-avail').value)||0;
+  const prod=parseFloat(document.getElementById('mk-prod').value)||0;
+  const dist=parseFloat(document.getElementById('mk-dist').value)||0;
+  const base=parseFloat(document.getElementById('mk-base').value)||0;
+  document.getElementById('mk-avail-out').textContent=avail;
+  document.getElementById('mk-prod-out').textContent=prod;
+  document.getElementById('mk-dist-out').textContent=dist;
+  document.getElementById('mk-base-out').textContent=base;
+  // Mirrors runAudit() exactly — read-only preview, never touches state/Supabase/infestation
+  const u=avail>0?Math.min(1,prod/avail):0;
+  const ps=100*(1-Math.pow(1-u,1.5));
+  const pd=dist<=0.5?0:10*Math.pow(dist,1.2);
+  const routineCount=(mockFlags.water?1:0)+(mockFlags.wake?1:0)+(mockFlags.sleep?1:0);
+  const mr=1.0+(routineCount*0.08);
+  const mb=mockFlags.fap?0.4:1.0;
+  const raw=Math.max(0,(ps-pd)*mr*mb);
+  const final=Math.min(100,Math.round((base+raw)/2));
+  document.getElementById('mk-raw-out').textContent=raw.toFixed(1)+'%';
+  document.getElementById('mk-final-out').textContent=final+'%';
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const base=document.getElementById('mk-base');
+  if(base&&typeof state!=='undefined')base.value=state.pointer||50;
+  if(document.getElementById('mk-avail'))mockCalc();
+});
 
 
 function runAudit(){
+  const avail=parseFloat(document.getElementById('a-avail').value)||0;
   const H=parseFloat(document.getElementById('a-study').value)||0;
   const D=parseFloat(document.getElementById('a-dist').value)||0;
   const S2=parseFloat(document.getElementById('a-sleep').value)||0;
-  const sandhi=document.getElementById('a-sandhi').value==='YES';
+  const water=document.getElementById('a-water').value==='YES';
   const wake=document.getElementById('a-wake').value==='YES';
   const fap=document.getElementById('a-fap').value==='YES';
-  let ps;
-  if(H<=2)ps=0;else if(H<=7)ps=10*(H-2);else if(H<=8)ps=50+16.7*(H-7);else if(H<=10)ps=66.7+8.15*(H-8);else ps=83+(8.5*(H-10));
-  ps=Math.min(150,ps);
+  // Utilization-based study score: no cliffs, concave (early effort counts most, diminishing near the top)
+  const u=avail>0?Math.min(1,H/avail):0;
+  const ps=100*(1-Math.pow(1-u,1.5));
   const pd=D<=0.5?0:10*(Math.pow(D,1.2));
-  // Partial routine bonus — each contributes equally (0.067x each, max 0.2x = 1.2x total)
-  // Not farmable — multiplier on study score, weak study day barely benefits
-  const routineCount=(sandhi?1:0)+(S2>=7?1:0)+(wake?1:0);
+  // Flag bonus — water, sleep>=7h, woke before 6am — each contributes equally (0.08x each, max 0.24x)
+  const routineCount=(water?1:0)+(S2>=7?1:0)+(wake?1:0);
   const mr=1.0+(routineCount*0.08);
   const mb=fap?0.4:1.0;
   const ts=Math.max(0,(ps-pd)*mr*mb);
@@ -4206,7 +4205,7 @@ function runAudit(){
   if(typeof window._updateInfestation==='function') window._updateInfestation(Math.round(ts));
   S.set('state',state);
   const el=document.getElementById('audit-result');el.style.display='block';
-  el.innerHTML=`<div class="card" style="border-color:var(--purple)"><div style="font-size:14px;line-height:2;font-family:'Inter',sans-serif">Study Engine: ${ps.toFixed(1)}<br>Penalty: -${pd.toFixed(1)}<br>Routine Mult: ${mr}x<br>${fap?'<span style="color:var(--red)">BREACH: 0.1x</span><br>':''}<hr style="border-color:var(--border);margin:4px 0"><strong style="color:var(--cyan)">Score: ${ts.toFixed(1)}%</strong><br><strong style="color:var(--yellow)">New Baseline: ${newDisc}%</strong></div></div>`;
+  el.innerHTML=`<div class="card" style="border-color:var(--purple)"><div style="font-size:14px;line-height:2;font-family:'Inter',sans-serif">Utilization: ${(u*100).toFixed(0)}% (${H}h / ${avail}h)<br>Study Engine: ${ps.toFixed(1)}<br>Penalty: -${pd.toFixed(1)}<br>Routine Mult: ${mr}x<br>${fap?'<span style="color:var(--red)">BREACH: 0.4x</span><br>':''}<hr style="border-color:var(--border);margin:4px 0"><strong style="color:var(--cyan)">Score: ${ts.toFixed(1)}%</strong><br><strong style="color:var(--yellow)">New Baseline: ${newDisc}%</strong></div></div>`;
   toast(`Audit: ${ts.toFixed(1)}% → Baseline ${newDisc}%`);
 }
 let logViewCutoff=S.get('log_view_cutoff',null);
@@ -4238,12 +4237,12 @@ function renderLogs(){
         <span style="color:${perfectColor};font-size:13px;font-weight:700">${l.perfect==='YES'?'👑 PERFECT DAY':''}</span>
       </div>
       <div style="font-size:14px;color:var(--white);margin-bottom:5px">
-        📚 ${l.study}h &nbsp;|&nbsp; ✅ ${l.missions} missions &nbsp;|&nbsp; ⭐ ${l.xp} XP &nbsp;|&nbsp; 📊 ${l.pointer}%
+        📚 ${l.study}h${l.utilization_pct!=null?` (${l.utilization_pct}% of ${l.available_hours}h)`:''} &nbsp;|&nbsp; ✅ ${l.missions} missions &nbsp;|&nbsp; ⭐ ${l.xp} XP &nbsp;|&nbsp; 📊 ${l.pointer}%
       </div>
       <div style="font-size:13px;display:flex;gap:12px;flex-wrap:wrap">
         <span style="color:${fapColor}">FAP: ${l.fap}</span>
         <span style="color:${wasteColor}">Waste: ${l.waste}</span>
-        <span style="color:${sandhiColor}">Sandhi: ${l.sandhi}</span>
+        <span style="color:${sandhiColor}">Water: ${l.water||l.sandhi||'NO'}</span>
         <span style="color:${sleepColor}">Sleep: ${l.sleep}</span>
       </div>
       <div style="font-size:12px;color:var(--gray);margin-top:4px">👆 tap for mission details</div>
@@ -5754,7 +5753,9 @@ function colRevealNext() {
   window.submitLog=submitLog;
   window._doSubmitLog=_doSubmitLog;
   window.runAuditAndLog=runAuditAndLog;
-  window.runGoalCalc=runGoalCalc;
+  window.mockCalc=mockCalc;
+  window.mockToggle=mockToggle;
+  window.mockUseCurrentBaseline=mockUseCurrentBaseline;
   window.runAudit=runAudit;
   window.renderLogs=renderLogs;
   window.showLogDetail=showLogDetail;
