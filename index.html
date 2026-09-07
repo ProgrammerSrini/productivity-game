@@ -6751,7 +6751,7 @@ window.thmDeleteOwned=thmDeleteOwned;
   // recovery is faster (both flat and % components increased). Infestation is
   // also hard-capped at INF_CAP so a bad streak can no longer spiral into the
   // thousands the way it used to.
-  const INF_CAP = 300; // was uncapped before
+  const INF_CAP = 400; // = MAX_ROACHES(40) * 10 — the exact floor at which roach count maxes out
   window._updateInfestation = function(rawScore){
     const r = Math.round(rawScore); // no clamp — can be 0-150+
     const inf = getInf();
